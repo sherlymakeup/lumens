@@ -115,3 +115,39 @@ export async function fetchModels(type: "chat" | "image" = "chat") {
     .map((model) => (typeof model === "string" ? model : model.id))
     .filter((id): id is string => Boolean(id));
 }
+
+export type HealthStatus = { ok: true; latencyMs: number };
+
+export async function checkHealth(): Promise<HealthStatus> {
+  const response = await fetch("/api/health", { method: "GET" });
+  const body = (await response.json()) as { ok?: boolean; latencyMs?: number; error?: string };
+  if (!response.ok || !body.ok) throw new Error(body.error ?? "Health check failed");
+  return { ok: true, latencyMs: body.latencyMs ?? 0 };
+}
+
+export type GeneratedImage = { dataUrl: string; mime: string };
+
+export async function generateImage(input: {
+  model: string;
+  prompt: string;
+  size?: "1024x1024" | "1024x1792" | "1792x1024";
+  n?: number;
+}): Promise<GeneratedImage[]> {
+  const model = input.model.trim();
+  const prompt = input.prompt.trim();
+  if (!model) throw new Error("Pilih model gambar dulu.");
+  if (!prompt) throw new Error("Prompt gambar tidak boleh kosong.");
+  const response = await fetch("/api/images", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      prompt,
+      size: input.size,
+      n: input.n ?? 1,
+    }),
+  });
+  const body = (await response.json()) as { images?: GeneratedImage[]; error?: string };
+  if (!response.ok) throw new Error(body.error ?? "Image generation failed");
+  return body.images ?? [];
+}

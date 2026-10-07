@@ -38,7 +38,7 @@ export function MessageList({
                 message.role === "user" ? "text-muted-foreground" : "text-foreground",
               )}
             >
-              {message.role === "user" ? "You" : "Lumen"}
+              {message.role === "user" ? "You" : "XDIRGA"}
             </div>
             {empty ? (
               thinking ? (

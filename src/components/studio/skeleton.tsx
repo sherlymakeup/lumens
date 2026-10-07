@@ -8,7 +8,7 @@ export function StudioSkeleton() {
         <div className="mb-6 flex items-center gap-3">
           <LumenMark />
           <div>
-            <div className="font-display text-xl leading-none">Lumen</div>
+            <div className="font-display text-xl leading-none">XDIRGA TOOLS</div>
             <div className="mt-1 text-xs tracking-wide text-muted-foreground uppercase">Studio</div>
           </div>
         </div>

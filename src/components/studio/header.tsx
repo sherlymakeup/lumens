@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Menu, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,8 +8,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { checkHealth } from "@/lib/generate";
 import { MODE_BY_ID } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
+import { cn } from "@/lib/utils";
+
+function HealthChip() {
+  const [state, setState] = useState<"loading" | "ok" | "error">("loading");
+  const [latency, setLatency] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    checkHealth().then(
+      (health) => {
+        if (cancelled) return;
+        setState("ok");
+        setLatency(health.latencyMs);
+      },
+      () => {
+        if (cancelled) return;
+        setState("error");
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <span
+      className="hidden items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground sm:inline-flex"
+      title={state === "ok" ? `9Router tersambung (${latency}ms)` : "9Router"}
+    >
+      <span
+        className={cn(
+          "inline-block size-1.5 rounded-full",
+          state === "ok" && "bg-emerald-500",
+          state === "error" && "bg-red-500",
+          state === "loading" && "animate-pulse bg-muted-foreground",
+        )}
+        aria-hidden
+      />
+      9Router{state === "ok" && latency !== null ? ` · ${latency}ms` : ""}
+    </span>
+  );
+}
 
 export function Header({ models }: { models: string[] }) {
   const modeId = useStudio((s) => s.modeId);
@@ -35,6 +79,7 @@ export function Header({ models }: { models: string[] }) {
         <div className="truncate text-sm font-medium">{mode.label}</div>
         <div className="truncate text-[11px] text-muted-foreground">{mode.hint}</div>
       </div>
+      <HealthChip />
       {options.length > 0 ? (
         <Select value={modelValue} onValueChange={(model) => setSettings({ model })}>
           <SelectTrigger className="h-9 w-[9.5rem] bg-transparent sm:w-44" aria-label="Model">

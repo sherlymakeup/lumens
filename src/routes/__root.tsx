@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Lumen";
+const APP_NAME = "XDIRGA TOOLS";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -13,7 +13,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: APP_NAME },
-      { name: "description", content: "A multipurpose AI writing studio with streaming, menus, and OpenAI-compatible settings." },
+      { name: "description", content: "Ruang kerja AI: chat, generasi konten, desain, prototipe, dan coding via 9Router." },
       { name: "theme-color", content: "#0c0c0d" },
     ],
     links: [

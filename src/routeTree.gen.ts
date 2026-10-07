@@ -10,15 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiImagesRouteImport } from './routes/api/images'
 import { Route as ApiModelsRouteImport } from './routes/api/models'
-import { Route as ApiStatusRouteImport } from './routes/api/status'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -41,52 +46,66 @@ const ApiModelsRoute = ApiModelsRouteImport.update({
   path: '/api/models',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStatusRoute = ApiStatusRouteImport.update({
-  id: '/api/status',
-  path: '/api/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
-  '/api/status': typeof ApiStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
-  '/api/status': typeof ApiStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
-  '/api/status': typeof ApiStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/generate' | '/api/health' | '/api/images' | '/api/models' | '/api/status'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/api/generate'
+    | '/api/health'
+    | '/api/images'
+    | '/api/models'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/generate' | '/api/health' | '/api/images' | '/api/models' | '/api/status'
-  id: '__root__' | '/' | '/api/generate' | '/api/health' | '/api/images' | '/api/models' | '/api/status'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/api/generate'
+    | '/api/health'
+    | '/api/images'
+    | '/api/models'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/api/generate'
+    | '/api/health'
+    | '/api/images'
+    | '/api/models'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImagesRoute: typeof ApiImagesRoute
   ApiModelsRoute: typeof ApiModelsRoute
-  ApiStatusRoute: typeof ApiStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -96,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -126,23 +152,16 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/status': {
-      id: '/api/status'
-      path: '/api/status'
-      fullPath: '/api/status'
-      preLoaderRoute: typeof ApiStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImagesRoute: ApiImagesRoute,
   ApiModelsRoute: ApiModelsRoute,
-  ApiStatusRoute: ApiStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

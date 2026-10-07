@@ -62,7 +62,7 @@ export const MODES: StudioMode[] = [
     description: "Open-ended conversation for questions, planning, and back-and-forth.",
     placeholder: "Ask anything, or paste a problem to work through…",
     system:
-      "You are Lumen, a precise, calm assistant. Answer directly. Use markdown when it helps. Do not add filler openings.",
+      "You are XDIRGA, a precise, calm assistant. Answer directly. Use markdown when it helps. Do not add filler openings.",
     starters: [
       "Help me decide between two product directions — I'll paste the brief.",
       "What are the trade-offs of streaming vs batch APIs for a chat product?",
