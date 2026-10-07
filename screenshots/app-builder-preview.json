@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Lumen",
+      "hasCanvas": false,
+      "bodyTextLen": 715,
+      "bodyTextHash": "6146a1c3f342ef8dcf816f1a37d9e8717c800863b02ee718612ae2d8c7dd74d9",
+      "bodyTextPrefix": "Lumen STUDIO New Write MENUS Chat Think out loud Write Long-form",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Lumen",
+      "hasCanvas": false,
+      "bodyTextLen": 414,
+      "bodyTextHash": "ad8f5b9f115fcb4ce22112397531f4f1b8ea20094d1941b2914eb0353c3a184e",
+      "bodyTextPrefix": "Write Long-form prose grok-4.5 Write Draft essays, articles, sto",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

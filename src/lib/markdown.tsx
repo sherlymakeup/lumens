@@ -1,0 +1,180 @@
+import { cn } from "./utils";
+
+const ESC: Record<string, string> = {
+  "&": "\u0026amp;",
+  "<": "\u0026lt;",
+  ">": "\u0026gt;",
+  '"': "\u0026quot;",
+};
+
+function escapeHtml(text: string) {
+  return text.replace(/[&<>"]/g, (ch) => ESC[ch] ?? ch);
+}
+
+function inlineToHtml(text: string) {
+  let html = escapeHtml(text);
+  html = html.replace(/`([^`]+)`/g, '<code class="md-icode">$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/(^|[^\w])\*([^*]+)\*(?!\w)/g, "$1<em>$2</em>");
+  html = html.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>',
+  );
+  return html;
+}
+
+type Block =
+  | { type: "code"; lang: string; body: string }
+  | { type: "heading"; level: 1 | 2 | 3; text: string }
+  | { type: "quote"; text: string }
+  | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "hr" }
+  | { type: "p"; text: string };
+
+function parseBlocks(source: string): Block[] {
+  const lines = source.replaceAll("\r\n", "\n").split("\n");
+  const blocks: Block[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i] ?? "";
+    if (line.startsWith("```")) {
+      const lang = line.slice(3).trim();
+      const body: string[] = [];
+      i += 1;
+      while (i < lines.length && !lines[i]?.startsWith("```")) {
+        body.push(lines[i] ?? "");
+        i += 1;
+      }
+      blocks.push({ type: "code", lang, body: body.join("\n") });
+      i += 1;
+      continue;
+    }
+    if (/^---+$/.test(line.trim())) {
+      blocks.push({ type: "hr" });
+      i += 1;
+      continue;
+    }
+    const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (heading) {
+      blocks.push({
+        type: "heading",
+        level: heading[1].length as 1 | 2 | 3,
+        text: heading[2],
+      });
+      i += 1;
+      continue;
+    }
+    if (line.startsWith("> ")) {
+      const quote: string[] = [];
+      while (i < lines.length && (lines[i]?.startsWith("> ") || lines[i] === ">")) {
+        quote.push((lines[i] ?? "").replace(/^>\s?/, ""));
+        i += 1;
+      }
+      blocks.push({ type: "quote", text: quote.join("\n") });
+      continue;
+    }
+    if (/^\s*[-*]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
+      const ordered = /^\s*\d+\.\s+/.test(line);
+      const items: string[] = [];
+      while (
+        i < lines.length &&
+        (ordered ? /^\s*\d+\.\s+/.test(lines[i] ?? "") : /^\s*[-*]\s+/.test(lines[i] ?? ""))
+      ) {
+        items.push((lines[i] ?? "").replace(/^\s*(?:[-*]|\d+\.)\s+/, ""));
+        i += 1;
+      }
+      blocks.push({ type: "list", ordered, items });
+      continue;
+    }
+    if (line.trim() === "") {
+      i += 1;
+      continue;
+    }
+    const para: string[] = [];
+    while (i < lines.length && (lines[i] ?? "").trim() !== "" && !isFenceOrBlock(lines[i] ?? "")) {
+      para.push(lines[i] ?? "");
+      i += 1;
+    }
+    blocks.push({ type: "p", text: para.join("\n") });
+  }
+  return blocks;
+}
+
+function isFenceOrBlock(line: string) {
+  return (
+    line.startsWith("```") ||
+    /^#{1,3}\s+/.test(line) ||
+    line.startsWith("> ") ||
+    /^\s*[-*]\s+/.test(line) ||
+    /^\s*\d+\.\s+/.test(line) ||
+    /^---+$/.test(line.trim())
+  );
+}
+
+export function Markdown({
+  content,
+  className,
+}: {
+  content: string;
+  className?: string;
+}) {
+  const blocks = parseBlocks(content);
+  return (
+    <div className={cn("md-body", className)}>
+      {blocks.map((block, index) => {
+        if (block.type === "code") {
+          return (
+            <pre key={index} className="md-pre">
+              {block.lang ? <span className="md-lang">{block.lang}</span> : null}
+              <code>{block.body}</code>
+            </pre>
+          );
+        }
+        if (block.type === "heading") {
+          const Tag = (`h${block.level}` as unknown) as "h1";
+          return (
+            <Tag
+              key={index}
+              className={cn(
+                "text-balance",
+                block.level === 1 && "md-h1",
+                block.level === 2 && "md-h2",
+                block.level === 3 && "md-h3",
+              )}
+              dangerouslySetInnerHTML={{ __html: inlineToHtml(block.text) }}
+            />
+          );
+        }
+        if (block.type === "quote") {
+          return (
+            <blockquote
+              key={index}
+              className="md-quote"
+              dangerouslySetInnerHTML={{ __html: inlineToHtml(block.text) }}
+            />
+          );
+        }
+        if (block.type === "list") {
+          const Tag = block.ordered ? "ol" : "ul";
+          return (
+            <Tag key={index} className={block.ordered ? "md-ol" : "md-ul"}>
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex} dangerouslySetInnerHTML={{ __html: inlineToHtml(item) }} />
+              ))}
+            </Tag>
+          );
+        }
+        if (block.type === "hr") {
+          return <hr key={index} className="md-hr" />;
+        }
+        return (
+          <p
+            key={index}
+            className="md-p"
+            dangerouslySetInnerHTML={{ __html: inlineToHtml(block.text) }}
+          />
+        );
+      })}
+    </div>
+  );
+}

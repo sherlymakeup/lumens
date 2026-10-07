@@ -1,0 +1,40 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Lumen",
+      "hasCanvas": false,
+      "bodyTextLen": 112,
+      "bodyTextHash": "bccdb7d8d082f76f76b8c500101b68bce49eae1157e3af391c822c0ad529bc61",
+      "bodyTextPrefix": "Lumen STUDIO Write Long-form prose Write Draft essays, articles,",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Lumen",
+      "hasCanvas": false,
+      "bodyTextLen": 414,
+      "bodyTextHash": "ad8f5b9f115fcb4ce22112397531f4f1b8ea20094d1941b2914eb0353c3a184e",
+      "bodyTextPrefix": "Write Long-form prose grok-4.5 Write Draft essays, articles, sto",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "desktop: body text collapsed (715 -> 112 chars)"
+  ]
+}
