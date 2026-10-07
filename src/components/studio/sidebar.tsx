@@ -1,4 +1,15 @@
-import { LayoutDashboard, MessageSquare, Plus, Trash2 } from "lucide-react";
+import {
+  Code2,
+  FolderKanban,
+  LayoutDashboard,
+  LayoutTemplate,
+  MessageSquare,
+  Palette,
+  PenLine,
+  Plug,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +23,58 @@ const WORKSPACE_NAV = [
   { to: "/dashboard", label: "Dasbor", Icon: LayoutDashboard },
   { to: "/", label: "Chat", Icon: MessageSquare },
 ] as const;
+
+const ENGINE_NAV = [
+  { to: "/engines/content", label: "Generasi Konten", Icon: PenLine },
+  { to: "/engines/design", label: "Desain", Icon: Palette },
+  { to: "/engines/prototype", label: "Prototipe", Icon: LayoutTemplate },
+  { to: "/engines/code", label: "Coding", Icon: Code2 },
+] as const;
+
+const MANAGE_NAV = [
+  { to: "/projects", label: "Proyek", Icon: FolderKanban },
+  { to: "/connection", label: "Koneksi", Icon: Plug },
+] as const;
+
+function NavLinks({
+  items,
+  onNavigate,
+}: {
+  items: readonly { to: string; label: string; Icon: typeof LayoutDashboard }[];
+  onNavigate: () => void;
+}) {
+  return (
+    <nav className="space-y-0.5 pb-4">
+      {items.map(({ to, label, Icon }) => (
+        <Link
+          key={to}
+          to={to}
+          onClick={onNavigate}
+          activeProps={{
+            className:
+              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm bg-sidebar-accent text-foreground",
+          }}
+          inactiveProps={{
+            className:
+              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground transition-colors duration-150",
+          }}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm"
+        >
+          <Icon className="size-4 shrink-0" strokeWidth={1.7} />
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function NavHeading({ children }: { children: string }) {
+  return (
+    <p className="px-2 pt-1 pb-2 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+      {children}
+    </p>
+  );
+}
 
 export function Sidebar({ className }: { className?: string }) {
   const modeId = useStudio((s) => s.modeId);
@@ -48,33 +111,13 @@ export function Sidebar({ className }: { className?: string }) {
       </div>
 
       <ScrollArea className="flex-1 px-2">
-        <p className="px-2 pt-1 pb-2 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-          Ruang Kerja
-        </p>
-        <nav className="space-y-0.5 pb-4">
-          {WORKSPACE_NAV.map(({ to, label, Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              onClick={() => setSidebarOpen(false)}
-              activeProps={{
-                className:
-                  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm bg-sidebar-accent text-foreground",
-              }}
-              inactiveProps={{
-                className:
-                  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground transition-colors duration-150",
-              }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm"
-            >
-              <Icon className="size-4 shrink-0" strokeWidth={1.7} />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-            </Link>
-          ))}
-        </nav>
-        <p className="px-2 pt-1 pb-2 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-          Menus
-        </p>
+        <NavHeading>Ruang Kerja</NavHeading>
+        <NavLinks items={WORKSPACE_NAV} onNavigate={() => setSidebarOpen(false)} />
+        <NavHeading>Engine</NavHeading>
+        <NavLinks items={ENGINE_NAV} onNavigate={() => setSidebarOpen(false)} />
+        <NavHeading>Kelola</NavHeading>
+        <NavLinks items={MANAGE_NAV} onNavigate={() => setSidebarOpen(false)} />
+        <NavHeading>Menus</NavHeading>
         <nav className="space-y-0.5 pb-4">
           {MODES.map((mode) => {
             const Icon = MODE_ICONS[mode.id];

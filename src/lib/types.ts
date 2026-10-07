@@ -56,6 +56,37 @@ export type Conversation = {
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  projectId?: string | null;
+};
+
+export type EngineId = "content" | "design" | "prototype" | "code";
+
+export type Project = {
+  id: string;
+  name: string;
+  createdAt: number;
+};
+
+export type CustomModel = {
+  id: string;
+  type: "chat" | "image";
+  addedAt: number;
+};
+
+export const ENGINE_IDS: EngineId[] = ["content", "design", "prototype", "code"];
+
+export const ENGINE_LABELS: Record<EngineId, string> = {
+  content: "Generasi Konten",
+  design: "Desain",
+  prototype: "Prototipe",
+  code: "Coding",
+};
+
+export const DEFAULT_ENGINE_MODELS: Record<EngineId, string> = {
+  content: "xdirgalabs",
+  design: "ag/gemini-3.1-flash-image",
+  prototype: "ag/claude-sonnet-4-6",
+  code: "ag/gpt-oss-120b-medium",
 };
 
 export type GenerateConnection = {

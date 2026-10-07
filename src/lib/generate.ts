@@ -151,3 +151,50 @@ export async function generateImage(input: {
   if (!response.ok) throw new Error(body.error ?? "Image generation failed");
   return body.images ?? [];
 }
+
+export type ModelTestResult = { ok: true; id: string; type: "chat" | "image" };
+
+export async function testModelConnection(model: string): Promise<ModelTestResult> {
+  const id = model.trim();
+  if (!id) throw new Error("ID model tidak boleh kosong.");
+  const response = await fetch("/api/models-test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: id }),
+  });
+  const body = (await response.json()) as {
+    ok?: boolean;
+    id?: string;
+    type?: "chat" | "image";
+    error?: string;
+  };
+  if (!response.ok || !body.ok) throw new Error(body.error ?? "Test koneksi model gagal.");
+  return { ok: true, id: body.id ?? id, type: body.type ?? "chat" };
+}
+
+export type SandboxResult = { stdout: string; stderr: string; exitCode: number };
+
+export async function runSandboxCommand(
+  command: string,
+  timeoutMs = 30_000,
+): Promise<SandboxResult> {
+  const cmd = command.trim();
+  if (!cmd) throw new Error("Command sandbox tidak boleh kosong.");
+  const response = await fetch("/api/sandbox/execute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ command: cmd, timeoutMs }),
+  });
+  const body = (await response.json()) as {
+    stdout?: string;
+    stderr?: string;
+    exitCode?: number;
+    error?: string;
+  };
+  if (!response.ok) throw new Error(body.error ?? "Sandbox execution failed.");
+  return {
+    stdout: body.stdout ?? "",
+    stderr: body.stderr ?? "",
+    exitCode: body.exitCode ?? 0,
+  };
+}

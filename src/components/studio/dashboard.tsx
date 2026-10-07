@@ -18,24 +18,28 @@ import { Sidebar } from "./sidebar";
 const ENGINES = [
   {
     id: "content",
+    to: "/engines/content",
     name: "Generasi Konten",
     description: "Artikel, copy landing, dan terjemahan yang tetap on-brand.",
     glyph: "C",
   },
   {
     id: "design",
+    to: "/engines/design",
     name: "Desain",
     description: "Dari prompt ke visual — frame hero dan konsep UI di kanvas.",
     glyph: "D",
   },
   {
     id: "prototype",
+    to: "/engines/prototype",
     name: "Prototipe",
     description: "Jelaskan aplikasinya, dapatkan pratinjau yang bisa diklik.",
     glyph: "P",
   },
   {
     id: "code",
+    to: "/engines/code",
     name: "Coding",
     description: "Chat paham repo, diff inline, dan pratinjau sandbox.",
     glyph: "{ }",
@@ -191,7 +195,7 @@ export function Dashboard() {
             {ENGINES.map((engine) => (
               <Link
                 key={engine.id}
-                to="/"
+                to={engine.to}
                 className="group rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50"
               >
                 <div className="flex items-center gap-3">
@@ -208,7 +212,7 @@ export function Dashboard() {
             ))}
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            Mesin Desain, Prototipe, dan Coding akan diaktifkan penuh di Fase 3.
+            Butuh NOVITA_API_KEY di environment server untuk panel sandbox engine Coding.
           </p>
         </div>
       </main>

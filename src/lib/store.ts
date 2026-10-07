@@ -2,8 +2,16 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { MODE_BY_ID, defaultExtras } from "./modes";
 import { applyDensity, applyFontSize, applyTheme } from "./theme";
-import type { ChatMessage, Conversation, ModeId, StudioSettings } from "./types";
-import { DEFAULT_SETTINGS } from "./types";
+import type {
+  ChatMessage,
+  Conversation,
+  CustomModel,
+  EngineId,
+  ModeId,
+  Project,
+  StudioSettings,
+} from "./types";
+import { DEFAULT_ENGINE_MODELS, DEFAULT_SETTINGS } from "./types";
 import { truncate, uid } from "./utils";
 
 type StudioState = {
@@ -16,6 +24,9 @@ type StudioState = {
   settingsOpen: boolean;
   settingsSection: string;
   streamingId: string | null;
+  engineModels: Record<EngineId, string>;
+  customModels: CustomModel[];
+  projects: Project[];
   setHydrated: () => void;
   setSettings: (partial: Partial<StudioSettings>) => void;
   resetSettings: () => void;
@@ -31,6 +42,13 @@ type StudioState = {
   patchMessage: (conversationId: string, messageId: string, patch: Partial<ChatMessage>) => void;
   setStreamingId: (id: string | null) => void;
   clearAll: () => void;
+  setEngineModel: (engine: EngineId, model: string) => void;
+  addCustomModel: (model: CustomModel) => void;
+  removeCustomModel: (id: string) => void;
+  createProject: (name: string) => string;
+  renameProject: (id: string, name: string) => void;
+  deleteProject: (id: string) => void;
+  assignProject: (conversationId: string, projectId: string | null) => void;
 };
 
 function applyChrome(settings: StudioSettings) {
@@ -51,6 +69,9 @@ export const useStudio = create<StudioState>()(
       settingsOpen: false,
       settingsSection: "connection",
       streamingId: null,
+      engineModels: { ...DEFAULT_ENGINE_MODELS },
+      customModels: [],
+      projects: [],
       setHydrated: () => {
         applyChrome(get().settings);
         set({ hydrated: true });
@@ -156,6 +177,40 @@ export const useStudio = create<StudioState>()(
       },
       setStreamingId: (streamingId) => set({ streamingId }),
       clearAll: () => set({ conversations: [], activeId: null, streamingId: null }),
+      setEngineModel: (engine, model) =>
+        set((state) => ({ engineModels: { ...state.engineModels, [engine]: model } })),
+      addCustomModel: (model) =>
+        set((state) =>
+          state.customModels.some((item) => item.id === model.id)
+            ? state
+            : { customModels: [...state.customModels, model] },
+        ),
+      removeCustomModel: (id) =>
+        set((state) => ({ customModels: state.customModels.filter((item) => item.id !== id) })),
+      createProject: (name) => {
+        const project: Project = { id: uid(), name: name.trim() || "Tanpa nama", createdAt: Date.now() };
+        set((state) => ({ projects: [project, ...state.projects] }));
+        return project.id;
+      },
+      renameProject: (id, name) =>
+        set((state) => ({
+          projects: state.projects.map((item) =>
+            item.id === id ? { ...item, name: name.trim() || item.name } : item,
+          ),
+        })),
+      deleteProject: (id) =>
+        set((state) => ({
+          projects: state.projects.filter((item) => item.id !== id),
+          conversations: state.conversations.map((item) =>
+            item.projectId === id ? { ...item, projectId: null } : item,
+          ),
+        })),
+      assignProject: (conversationId, projectId) =>
+        set((state) => ({
+          conversations: state.conversations.map((item) =>
+            item.id === conversationId ? { ...item, projectId, updatedAt: Date.now() } : item,
+          ),
+        })),
     }),
     {
       name: "chat-studio-v1",
@@ -164,6 +219,9 @@ export const useStudio = create<StudioState>()(
         conversations: state.conversations,
         activeId: state.activeId,
         modeId: state.modeId,
+        engineModels: state.engineModels,
+        customModels: state.customModels,
+        projects: state.projects,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();

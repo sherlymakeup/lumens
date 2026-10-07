@@ -10,20 +10,38 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConnectionRouteImport } from './routes/connection'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiImagesRouteImport } from './routes/api/images'
 import { Route as ApiModelsRouteImport } from './routes/api/models'
+import { Route as ApiModelsTestRouteImport } from './routes/api/models-test'
+import { Route as EnginesCodeRouteImport } from './routes/engines/code'
+import { Route as EnginesContentRouteImport } from './routes/engines/content'
+import { Route as EnginesDesignRouteImport } from './routes/engines/design'
+import { Route as EnginesPrototypeRouteImport } from './routes/engines/prototype'
+import { Route as ApiSandboxExecuteRouteImport } from './routes/api/sandbox/execute'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConnectionRoute = ConnectionRouteImport.update({
+  id: '/connection',
+  path: '/connection',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -46,66 +64,152 @@ const ApiModelsRoute = ApiModelsRouteImport.update({
   path: '/api/models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiModelsTestRoute = ApiModelsTestRouteImport.update({
+  id: '/api/models-test',
+  path: '/api/models-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnginesCodeRoute = EnginesCodeRouteImport.update({
+  id: '/engines/code',
+  path: '/engines/code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnginesContentRoute = EnginesContentRouteImport.update({
+  id: '/engines/content',
+  path: '/engines/content',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnginesDesignRoute = EnginesDesignRouteImport.update({
+  id: '/engines/design',
+  path: '/engines/design',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnginesPrototypeRoute = EnginesPrototypeRouteImport.update({
+  id: '/engines/prototype',
+  path: '/engines/prototype',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSandboxExecuteRoute = ApiSandboxExecuteRouteImport.update({
+  id: '/api/sandbox/execute',
+  path: '/api/sandbox/execute',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/connection': typeof ConnectionRoute
   '/dashboard': typeof DashboardRoute
+  '/projects': typeof ProjectsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
+  '/api/models-test': typeof ApiModelsTestRoute
+  '/engines/code': typeof EnginesCodeRoute
+  '/engines/content': typeof EnginesContentRoute
+  '/engines/design': typeof EnginesDesignRoute
+  '/engines/prototype': typeof EnginesPrototypeRoute
+  '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/connection': typeof ConnectionRoute
   '/dashboard': typeof DashboardRoute
+  '/projects': typeof ProjectsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
+  '/api/models-test': typeof ApiModelsTestRoute
+  '/engines/code': typeof EnginesCodeRoute
+  '/engines/content': typeof EnginesContentRoute
+  '/engines/design': typeof EnginesDesignRoute
+  '/engines/prototype': typeof EnginesPrototypeRoute
+  '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/connection': typeof ConnectionRoute
   '/dashboard': typeof DashboardRoute
+  '/projects': typeof ProjectsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
+  '/api/models-test': typeof ApiModelsTestRoute
+  '/engines/code': typeof EnginesCodeRoute
+  '/engines/content': typeof EnginesContentRoute
+  '/engines/design': typeof EnginesDesignRoute
+  '/engines/prototype': typeof EnginesPrototypeRoute
+  '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/connection'
     | '/dashboard'
+    | '/projects'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
     | '/api/models'
+    | '/api/models-test'
+    | '/engines/code'
+    | '/engines/content'
+    | '/engines/design'
+    | '/engines/prototype'
+    | '/api/sandbox/execute'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/connection'
     | '/dashboard'
+    | '/projects'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
     | '/api/models'
+    | '/api/models-test'
+    | '/engines/code'
+    | '/engines/content'
+    | '/engines/design'
+    | '/engines/prototype'
+    | '/api/sandbox/execute'
   id:
     | '__root__'
     | '/'
+    | '/connection'
     | '/dashboard'
+    | '/projects'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
     | '/api/models'
+    | '/api/models-test'
+    | '/engines/code'
+    | '/engines/content'
+    | '/engines/design'
+    | '/engines/prototype'
+    | '/api/sandbox/execute'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConnectionRoute: typeof ConnectionRoute
   DashboardRoute: typeof DashboardRoute
+  ProjectsRoute: typeof ProjectsRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImagesRoute: typeof ApiImagesRoute
   ApiModelsRoute: typeof ApiModelsRoute
+  ApiModelsTestRoute: typeof ApiModelsTestRoute
+  EnginesCodeRoute: typeof EnginesCodeRoute
+  EnginesContentRoute: typeof EnginesContentRoute
+  EnginesDesignRoute: typeof EnginesDesignRoute
+  EnginesPrototypeRoute: typeof EnginesPrototypeRoute
+  ApiSandboxExecuteRoute: typeof ApiSandboxExecuteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -117,11 +221,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/connection': {
+      id: '/connection'
+      path: '/connection'
+      fullPath: '/connection'
+      preLoaderRoute: typeof ConnectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -152,16 +270,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/models-test': {
+      id: '/api/models-test'
+      path: '/api/models-test'
+      fullPath: '/api/models-test'
+      preLoaderRoute: typeof ApiModelsTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engines/code': {
+      id: '/engines/code'
+      path: '/engines/code'
+      fullPath: '/engines/code'
+      preLoaderRoute: typeof EnginesCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engines/content': {
+      id: '/engines/content'
+      path: '/engines/content'
+      fullPath: '/engines/content'
+      preLoaderRoute: typeof EnginesContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engines/design': {
+      id: '/engines/design'
+      path: '/engines/design'
+      fullPath: '/engines/design'
+      preLoaderRoute: typeof EnginesDesignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engines/prototype': {
+      id: '/engines/prototype'
+      path: '/engines/prototype'
+      fullPath: '/engines/prototype'
+      preLoaderRoute: typeof EnginesPrototypeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sandbox/execute': {
+      id: '/api/sandbox/execute'
+      path: '/api/sandbox/execute'
+      fullPath: '/api/sandbox/execute'
+      preLoaderRoute: typeof ApiSandboxExecuteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConnectionRoute: ConnectionRoute,
   DashboardRoute: DashboardRoute,
+  ProjectsRoute: ProjectsRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImagesRoute: ApiImagesRoute,
   ApiModelsRoute: ApiModelsRoute,
+  ApiModelsTestRoute: ApiModelsTestRoute,
+  EnginesCodeRoute: EnginesCodeRoute,
+  EnginesContentRoute: EnginesContentRoute,
+  EnginesDesignRoute: EnginesDesignRoute,
+  EnginesPrototypeRoute: EnginesPrototypeRoute,
+  ApiSandboxExecuteRoute: ApiSandboxExecuteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
