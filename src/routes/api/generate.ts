@@ -79,6 +79,7 @@ export const Route = createFileRoute("/api/generate")({
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${apiKey}`,
+              "User-Agent": "lumens-proxy/1.0",
             },
             body: JSON.stringify(payload),
             signal: request.signal,

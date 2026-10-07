@@ -27,7 +27,10 @@ export const Route = createFileRoute("/api/models")({
 
         try {
           const response = await fetch(url, {
-            headers: { Authorization: `Bearer ${key}` },
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "User-Agent": "lumens-proxy/1.0",
+            },
             signal: AbortSignal.timeout(12_000),
           });
           if (!response.ok) {
