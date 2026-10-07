@@ -58,3 +58,17 @@ export function chatCompletionsUrl(baseUrl: string) {
 export function modelsUrl(baseUrl: string) {
   return `${normalizeBaseUrl(baseUrl)}/models`;
 }
+
+export function imageModelsUrl(baseUrl: string) {
+  return `${normalizeBaseUrl(baseUrl)}/models/image`;
+}
+
+export function imagesGenerationsUrl(baseUrl: string) {
+  return `${normalizeBaseUrl(baseUrl)}/images/generations`;
+}
+
+export function gatewayHealthUrl(baseUrl: string) {
+  // Health lives at the gateway origin, not under /v1.
+  const base = normalizeBaseUrl(baseUrl).replace(/\/v1$/, "");
+  return `${base}/api/health`;
+}

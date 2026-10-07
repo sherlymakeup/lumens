@@ -104,9 +104,14 @@ export async function generateStream(request: GenerateRequest, handlers: StreamH
   if (!failed) handlers.onDone();
 }
 
-export async function fetchModels() {
-  const response = await fetch("/api/models", { method: "GET" });
-  const body = (await response.json()) as { models?: string[]; error?: string };
+export async function fetchModels(type: "chat" | "image" = "chat") {
+  const response = await fetch(`/api/models?type=${type}`, { method: "GET" });
+  const body = (await response.json()) as {
+    models?: (string | { id?: string })[];
+    error?: string;
+  };
   if (!response.ok) throw new Error(body.error ?? "Could not list models");
-  return body.models ?? [];
+  return (body.models ?? [])
+    .map((model) => (typeof model === "string" ? model : model.id))
+    .filter((id): id is string => Boolean(id));
 }

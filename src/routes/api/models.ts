@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { modelsUrl } from "@/lib/safe-url";
+import { modelsUrl, imageModelsUrl } from "@/lib/safe-url";
+
+type ModelInfo = { id: string; owned_by: string };
 
 export const Route = createFileRoute("/api/models")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
         // Endpoint credentials live on the server (Vercel env) — never in the UI.
         const key = process.env.OPENAI_API_KEY?.trim() ?? "";
         const base = process.env.OPENAI_BASE_URL?.trim() ?? "";
@@ -15,9 +17,17 @@ export const Route = createFileRoute("/api/models")({
           );
         }
 
+        const type = new URL(request.url).searchParams.get("type") ?? "chat";
+        if (type !== "chat" && type !== "image") {
+          return Response.json(
+            { error: 'Invalid type. Use "chat" or "image".' },
+            { status: 400 },
+          );
+        }
+
         let url: string;
         try {
-          url = modelsUrl(base);
+          url = type === "image" ? imageModelsUrl(base) : modelsUrl(base);
         } catch (error) {
           return Response.json(
             { error: error instanceof Error ? error.message : "Invalid base URL." },
@@ -52,10 +62,12 @@ export const Route = createFileRoute("/api/models")({
             }
             return Response.json({ error: detail }, { status: 502 });
           }
-          const body = (await response.json()) as { data?: { id?: string }[] };
-          const models = (body.data ?? [])
-            .map((item) => item.id)
-            .filter((id): id is string => Boolean(id))
+          const body = (await response.json()) as {
+            data?: { id?: string; owned_by?: string }[];
+          };
+          const models: ModelInfo[] = (body.data ?? [])
+            .map((item) => ({ id: item.id ?? "", owned_by: item.owned_by ?? "" }))
+            .filter((model) => Boolean(model.id))
             .slice(0, 80);
           return Response.json({ models });
         } catch {

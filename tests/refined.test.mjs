@@ -1,7 +1,7 @@
 // Headless refinement tests — run: node --experimental-strip-types tests/refined.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { normalizeBaseUrl, chatCompletionsUrl, modelsUrl } from "../src/lib/safe-url.ts";
+import { normalizeBaseUrl, chatCompletionsUrl, modelsUrl, imageModelsUrl, imagesGenerationsUrl, gatewayHealthUrl } from "../src/lib/safe-url.ts";
 import { generateStream, fetchModels } from "../src/lib/generate.ts";
 
 // ---------- safe-url ----------
@@ -16,6 +16,19 @@ test("chatCompletionsUrl never produces double slash", () => {
     "https://ai.xdirga.xyz/v1/chat/completions",
   );
   assert.equal(modelsUrl("https://ai.xdirga.xyz/v1/"), "https://ai.xdirga.xyz/v1/models");
+});
+
+test("image + health URL builders (9Router contract)", () => {
+  assert.equal(
+    imageModelsUrl("https://ai.xdirga.xyz/v1/"),
+    "https://ai.xdirga.xyz/v1/models/image",
+  );
+  assert.equal(
+    imagesGenerationsUrl("https://ai.xdirga.xyz/v1"),
+    "https://ai.xdirga.xyz/v1/images/generations",
+  );
+  assert.equal(gatewayHealthUrl("https://ai.xdirga.xyz/v1"), "https://ai.xdirga.xyz/api/health");
+  assert.equal(gatewayHealthUrl("https://ai.xdirga.xyz/v1/"), "https://ai.xdirga.xyz/api/health");
 });
 
 test("normalizeBaseUrl rejects invalid / private hosts", () => {
@@ -138,17 +151,35 @@ test("fetchModels uses GET with no body (server env holds credentials)", async (
   const realFetch = globalThis.fetch;
   let seenMethod = null;
   let seenBody;
+  let seenUrl = "";
   globalThis.fetch = async (url, init) => {
     seenMethod = init?.method;
     seenBody = init?.body;
-    assert.equal(url, "/api/models");
-    return new Response(JSON.stringify({ models: ["a", "b"] }));
+    seenUrl = String(url);
+    assert.equal(url, "/api/models?type=chat");
+    return new Response(JSON.stringify({ models: [{ id: "a" }, { id: "b" }] }));
   };
   try {
     const models = await fetchModels();
     assert.deepEqual(models, ["a", "b"]);
     assert.equal(seenMethod, "GET");
     assert.equal(seenBody, undefined);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("fetchModels tolerates legacy string[] shape and image type", async () => {
+  const realFetch = globalThis.fetch;
+  let seenUrl = "";
+  globalThis.fetch = async (url) => {
+    seenUrl = String(url);
+    return new Response(JSON.stringify({ models: ["x", "y"] }));
+  };
+  try {
+    const models = await fetchModels("image");
+    assert.deepEqual(models, ["x", "y"]);
+    assert.equal(seenUrl, "/api/models?type=image");
   } finally {
     globalThis.fetch = realFetch;
   }

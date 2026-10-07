@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiImagesRouteImport } from './routes/api/images'
 import { Route as ApiModelsRouteImport } from './routes/api/models'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
 
@@ -22,6 +24,16 @@ const IndexRoute = IndexRouteImport.update({
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
   id: '/api/generate',
   path: '/api/generate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiImagesRoute = ApiImagesRouteImport.update({
+  id: '/api/images',
+  path: '/api/images',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiModelsRoute = ApiModelsRouteImport.update({
@@ -38,12 +50,16 @@ const ApiStatusRoute = ApiStatusRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
   '/api/status': typeof ApiStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
   '/api/status': typeof ApiStatusRoute
 }
@@ -51,20 +67,24 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
   '/api/status': typeof ApiStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/generate' | '/api/models' | '/api/status'
+  fullPaths: '/' | '/api/generate' | '/api/health' | '/api/images' | '/api/models' | '/api/status'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/generate' | '/api/models' | '/api/status'
-  id: '__root__' | '/' | '/api/generate' | '/api/models' | '/api/status'
+  to: '/' | '/api/generate' | '/api/health' | '/api/images' | '/api/models' | '/api/status'
+  id: '__root__' | '/' | '/api/generate' | '/api/health' | '/api/images' | '/api/models' | '/api/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
+  ApiHealthRoute: typeof ApiHealthRoute
+  ApiImagesRoute: typeof ApiImagesRoute
   ApiModelsRoute: typeof ApiModelsRoute
   ApiStatusRoute: typeof ApiStatusRoute
 }
@@ -83,6 +103,20 @@ declare module '@tanstack/react-router' {
       path: '/api/generate'
       fullPath: '/api/generate'
       preLoaderRoute: typeof ApiGenerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/images': {
+      id: '/api/images'
+      path: '/api/images'
+      fullPath: '/api/images'
+      preLoaderRoute: typeof ApiImagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/models': {
@@ -105,6 +139,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiGenerateRoute: ApiGenerateRoute,
+  ApiHealthRoute: ApiHealthRoute,
+  ApiImagesRoute: ApiImagesRoute,
   ApiModelsRoute: ApiModelsRoute,
   ApiStatusRoute: ApiStatusRoute,
 }
