@@ -31,10 +31,23 @@ export const Route = createFileRoute("/api/models")({
             signal: AbortSignal.timeout(12_000),
           });
           if (!response.ok) {
-            return Response.json(
-              { error: `Model list failed (${response.status}).` },
-              { status: 502 },
-            );
+            // Surface the upstream reason (e.g. "invalid key" vs a block page)
+            // so a 403 is debuggable from the UI toast.
+            let detail = `Model list failed (${response.status})`;
+            const text = await response.text().catch(() => "");
+            if (text) {
+              try {
+                const errBody = JSON.parse(text) as {
+                  error?: { message?: string } | string;
+                };
+                if (typeof errBody.error === "string") detail += `: ${errBody.error}`;
+                else if (errBody.error?.message) detail += `: ${errBody.error.message}`;
+                else detail += `: ${text.slice(0, 200)}`;
+              } catch {
+                detail += `: ${text.slice(0, 200)}`;
+              }
+            }
+            return Response.json({ error: detail }, { status: 502 });
           }
           const body = (await response.json()) as { data?: { id?: string }[] };
           const models = (body.data ?? [])
