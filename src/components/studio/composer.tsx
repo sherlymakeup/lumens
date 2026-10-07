@@ -65,7 +65,7 @@ export function Composer({
   const sendOnEnter = typeof document !== "undefined" && document.documentElement.dataset.sendEnter === "1";
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4">
+    <div className="mx-auto w-full max-w-3xl shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4">
       <div className="rounded-2xl bg-card p-2 shadow-[var(--shadow-border)]">
         {mode.extras.length > 0 ? (
           <div className="flex flex-wrap gap-2 px-2 pt-1.5 pb-2">

@@ -201,10 +201,10 @@ export function Studio() {
 
   return (
     <div
-      className="flex min-h-dvh bg-background text-foreground"
+      className="flex h-dvh overflow-hidden bg-background text-foreground"
       data-density={settings.density}
     >
-      <aside className="hidden w-64 shrink-0 border-r border-sidebar-border md:block">
+      <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
         <Sidebar />
       </aside>
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -214,7 +214,7 @@ export function Studio() {
       </Sheet>
 
       <div
-        className="flex min-w-0 flex-1 flex-col"
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
         style={{ backgroundImage: "var(--canvas-wash)" }}
       >
         <Header models={models} />
