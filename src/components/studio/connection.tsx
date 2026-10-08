@@ -16,6 +16,7 @@ import { useStrings } from "@/lib/i18n";
 import { useStudio } from "@/lib/store";
 import type { EngineId } from "@/lib/types";
 import { ENGINE_IDS, ENGINE_LABELS } from "@/lib/types";
+import { PageBar } from "./header";
 import { Sidebar } from "./sidebar";
 
 type TestState = "idle" | "testing" | "ok" | "error";
@@ -93,6 +94,7 @@ export function Connection() {
       </Sheet>
 
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <PageBar title={t["conn.title"]} />
         <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
             {t["conn.kicker"]}

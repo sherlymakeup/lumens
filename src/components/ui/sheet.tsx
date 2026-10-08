@@ -39,11 +39,10 @@ function SheetContent({
       <DialogPrimitive.Content
         aria-describedby={undefined}
         className={cn(
-          "fixed z-50 flex h-full flex-col bg-card text-card-foreground shadow-[var(--shadow-border)] outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-150 data-[state=open]:duration-400",
-          side === "right" &&
-            "inset-y-0 right-0 w-full max-w-lg data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
-          side === "left" &&
-            "inset-y-0 left-0 w-full max-w-80 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+          // Tanpa animasi slide — drawer muncul/hilang instan biar ringan di HP.
+          "fixed z-50 flex h-full flex-col bg-card text-card-foreground shadow-[var(--shadow-border)] outline-none",
+          side === "right" && "inset-y-0 right-0 w-full max-w-lg",
+          side === "left" && "inset-y-0 left-0 w-full max-w-80",
           className,
         )}
         {...props}

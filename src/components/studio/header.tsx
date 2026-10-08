@@ -114,3 +114,18 @@ export function Header({ models }: { models: string[] }) {
     </header>
   );
 }
+
+/** Top bar ramping khusus mobile: tombol hamburger + judul halaman.
+ *  Dipakai di halaman selain chat (dashboard, connection, projects, engines)
+ *  yang tidak memakai Header penuh. Di desktop disembunyikan (sidebar selalu terlihat). */
+export function PageBar({ title }: { title: string }) {
+  const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
+  return (
+    <div className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur md:hidden">
+      <Button variant="ghost" size="icon" aria-label="Menu" onClick={() => setSidebarOpen(true)}>
+        <Menu className="size-5" />
+      </Button>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+    </div>
+  );
+}

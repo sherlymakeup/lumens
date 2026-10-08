@@ -1,15 +1,17 @@
 import {
+  Bot,
   Code2,
   FolderKanban,
   LayoutDashboard,
   LayoutTemplate,
-  MessageSquare,
   Palette,
+  Pencil,
   PenLine,
   Plug,
   Plus,
   Trash2,
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,7 +24,7 @@ import { useStrings, type StringKey } from "@/lib/i18n";
 
 const WORKSPACE_NAV = [
   { to: "/dashboard", labelKey: "nav.dashboard", Icon: LayoutDashboard },
-  { to: "/", labelKey: "nav.chat", Icon: MessageSquare },
+  { to: "/", labelKey: "nav.chat", Icon: Bot },
 ] as const;
 
 const ENGINE_NAV = [
@@ -86,8 +88,17 @@ export function Sidebar({ className }: { className?: string }) {
   const newConversation = useStudio((s) => s.newConversation);
   const selectConversation = useStudio((s) => s.selectConversation);
   const deleteConversation = useStudio((s) => s.deleteConversation);
+  const renameConversation = useStudio((s) => s.renameConversation);
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
   const t = useStrings();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
+  function commitRename(id: string) {
+    if (editingId !== id) return;
+    renameConversation(id, editingTitle);
+    setEditingId(null);
+  }
 
   const recent = conversations
     .filter((item) => item.modeId === modeId)
@@ -162,12 +173,43 @@ export function Sidebar({ className }: { className?: string }) {
                   item.id === activeId ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/70",
                 )}
               >
+                {editingId === item.id ? (
+                  <input
+                    autoFocus
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => commitRename(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename(item.id);
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="min-w-0 flex-1 truncate bg-transparent px-2.5 py-2 text-left text-sm outline-none"
+                    aria-label="Rename conversation"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => selectConversation(item.id)}
+                    onDoubleClick={() => {
+                      setEditingId(item.id);
+                      setEditingTitle(item.title);
+                    }}
+                    className="min-w-0 flex-1 truncate px-2.5 py-2 text-left text-sm"
+                  >
+                    {item.title}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => selectConversation(item.id)}
-                  className="min-w-0 flex-1 truncate px-2.5 py-2 text-left text-sm"
+                  aria-label="Rename"
+                  onClick={() => {
+                    setEditingId(item.id);
+                    setEditingTitle(item.title);
+                  }}
+                  className="rounded-md p-2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
                 >
-                  {item.title}
+                  <Pencil className="size-3.5" />
                 </button>
                 <button
                   type="button"

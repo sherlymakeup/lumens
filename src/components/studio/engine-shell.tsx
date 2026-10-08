@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useStudio } from "@/lib/store";
+import { PageBar } from "./header";
 import { Sidebar } from "./sidebar";
 
 export function EngineShell({
@@ -27,6 +28,7 @@ export function EngineShell({
         </SheetContent>
       </Sheet>
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <PageBar title={title} />
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
           <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
             {kicker}

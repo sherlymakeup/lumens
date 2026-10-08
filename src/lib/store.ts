@@ -38,6 +38,7 @@ type StudioState = {
   forkConversation: (conversationId: string, messageId: string) => string | null;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
+  renameConversation: (id: string, title: string) => void;
   setExtras: (conversationId: string, extras: Record<string, string>) => void;
   addMessage: (conversationId: string, message: ChatMessage) => void;
   patchMessage: (conversationId: string, messageId: string, patch: Partial<ChatMessage>) => void;
@@ -160,6 +161,14 @@ export const useStudio = create<StudioState>()(
           activeId: fallback?.id ?? null,
           modeId: fallback?.modeId ?? modeId,
         });
+      },
+      renameConversation: (id, title) => {
+        const clean = title.trim().slice(0, 80) || "Untitled";
+        set((state) => ({
+          conversations: state.conversations.map((item) =>
+            item.id === id ? { ...item, title: clean, updatedAt: Date.now() } : item,
+          ),
+        }));
       },
       setExtras: (conversationId, extras) => {
         set((state) => ({
