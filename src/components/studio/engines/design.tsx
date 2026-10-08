@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchModels, generateImage, type GeneratedImage } from "@/lib/generate";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { EngineShell } from "../engine-shell";
 
 const SIZES = ["1024x1024", "1024x1792", "1792x1024"] as const;
@@ -21,6 +22,7 @@ export function DesignEngine() {
   const engineModel = useStudio((s) => s.engineModels.design);
   const [models, setModels] = useState<string[]>([]);
   const [model, setModel] = useState(engineModel);
+  const t = useStrings();
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState<(typeof SIZES)[number]>("1024x1024");
   const [count, setCount] = useState(1);
@@ -28,7 +30,7 @@ export function DesignEngine() {
   const [gallery, setGallery] = useState<(GeneratedImage & { prompt: string })[]>([]);
 
   useEffect(() => {
-    fetchModels("image").then(setModels, () => toast.error("Gagal memuat model gambar."));
+    fetchModels("image").then(setModels, () => toast.error(t["eng.noModel"]));
   }, []);
   useEffect(() => {
     setModel(engineModel);
@@ -38,7 +40,7 @@ export function DesignEngine() {
     if (!prompt.trim() || busy) return;
     const chosen = model || engineModel;
     if (!chosen) {
-      toast.error("Pilih model gambar dulu di halaman Koneksi.");
+      toast.error(t["eng.noModel"]);
       return;
     }
     setBusy(true);
@@ -57,22 +59,22 @@ export function DesignEngine() {
 
   return (
     <EngineShell
-      kicker="Engine"
-      title="Desain"
-      subtitle="Dari prompt ke visual — via model gambar 9Router."
+      kicker={t["eng.kicker"]}
+      title={t["eng.designTitle"]}
+      subtitle={t["eng.designSubtitle"]}
     >
       <div className="rounded-xl border border-border bg-card p-4">
         <Textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Deskripsikan visual yang diinginkan…"
+          placeholder={t["eng.promptImage"]}
           rows={3}
-          aria-label="Prompt gambar"
+          aria-label={t["eng.promptImage"]}
         />
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Select value={models.includes(model) ? model : undefined} onValueChange={setModel}>
             <SelectTrigger className="w-56 font-mono text-xs" aria-label="Model gambar">
-              <SelectValue placeholder="Pilih model" />
+              <SelectValue placeholder={t["conn.chooseModel"]} />
             </SelectTrigger>
             <SelectContent>
               {models.map((m) => (
@@ -108,7 +110,7 @@ export function DesignEngine() {
           </Select>
           <Button onClick={() => void run()} disabled={!prompt.trim() || busy} className="gap-1.5">
             {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
-            Generate
+            {t["eng.generate"]}
           </Button>
         </div>
       </div>
@@ -136,7 +138,7 @@ export function DesignEngine() {
                   href={item.dataUrl}
                   download={`xdirga-${Date.now()}.${item.mime.split("/")[1] ?? "png"}`}
                   className="rounded-md p-1.5 text-muted-foreground hover:text-foreground"
-                  aria-label="Unduh gambar"
+                  aria-label={t["eng.downloadImage"]}
                 >
                   <Download className="size-4" />
                 </a>

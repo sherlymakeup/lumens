@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { EngineShell } from "./engine-shell";
 
 export function Projects() {
@@ -18,13 +19,14 @@ export function Projects() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const t = useStrings();
 
   function handleCreate() {
     if (!name.trim()) return;
     const id = createProject(name.trim());
     setName("");
     setOpenId(id);
-    toast.success("Proyek dibuat.");
+    toast.success(t["proj.created"]);
   }
 
   function handleRename(id: string) {
@@ -43,11 +45,7 @@ export function Projects() {
   const unassigned = conversations.filter((c) => !c.projectId);
 
   return (
-    <EngineShell
-      kicker="Ruang Kerja"
-      title="Proyek"
-      subtitle="Kelompokkan percakapan ke dalam proyek."
-    >
+    <EngineShell kicker={t["proj.kicker"]} title={t["proj.title"]} subtitle={t["proj.subtitle"]}>
       <div className="flex gap-2">
         <Input
           value={name}
@@ -55,18 +53,16 @@ export function Projects() {
           onKeyDown={(e) => {
             if (e.key === "Enter") handleCreate();
           }}
-          placeholder="Nama proyek baru…"
-          aria-label="Nama proyek baru"
+          placeholder={t["proj.newPlaceholder"]}
+          aria-label={t["proj.newPlaceholder"]}
         />
         <Button onClick={handleCreate} disabled={!name.trim()} className="gap-1.5">
-          <FolderPlus className="size-4" /> Buat
+          <FolderPlus className="size-4" /> {t["proj.create"]}
         </Button>
       </div>
 
       {projects.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Belum ada proyek. Buat satu untuk mulai mengelompokkan percakapan.
-        </p>
+        <p className="mt-6 text-sm text-muted-foreground">{t["proj.noProjects"]}</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {projects.map((project) => {
@@ -86,7 +82,7 @@ export function Projects() {
                       }}
                       onBlur={() => handleRename(project.id)}
                       className="h-8"
-                      aria-label="Nama proyek"
+                      aria-label={t["proj.projectName"]}
                     />
                   ) : (
                     <button
@@ -96,13 +92,13 @@ export function Projects() {
                     >
                       {project.name}
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        {count} percakapan
+                        {count} {t["proj.conversations"]}
                       </span>
                     </button>
                   )}
                   <button
                     type="button"
-                    aria-label={`Ubah nama ${project.name}`}
+                    aria-label={`${t["proj.rename"]}: ${project.name}`}
                     onClick={() => {
                       setEditingId(project.id);
                       setEditingName(project.name);
@@ -113,11 +109,11 @@ export function Projects() {
                   </button>
                   <button
                     type="button"
-                    aria-label={`Hapus ${project.name}`}
+                    aria-label={`${t["proj.delete"]}: ${project.name}`}
                     onClick={() => {
                       deleteProject(project.id);
                       if (openId === project.id) setOpenId(null);
-                      toast.success("Proyek dihapus.");
+                      toast.success(t["proj.deleted"]);
                     }}
                     className="rounded-md p-1.5 text-muted-foreground hover:text-red-500"
                   >
@@ -127,7 +123,7 @@ export function Projects() {
                 {open && (
                   <div className="border-t border-border p-3">
                     {projectConversations.length === 0 && unassigned.length === 0 && (
-                      <p className="text-xs text-muted-foreground">Belum ada percakapan.</p>
+                      <p className="text-xs text-muted-foreground">{t["proj.noConversations"]}</p>
                     )}
                     {projectConversations.map((c) => (
                       <div key={c.id} className="flex items-center gap-2 py-1">
@@ -137,14 +133,14 @@ export function Projects() {
                           onClick={() => assignProject(c.id, null)}
                           className="text-xs text-muted-foreground hover:text-red-500"
                         >
-                          Keluarkan
+                          {t["proj.moveOut"]}
                         </button>
                       </div>
                     ))}
                     {unassigned.length > 0 && (
                       <div className="mt-2 border-t border-border pt-2">
                         <p className="mb-1 text-[11px] tracking-wider text-muted-foreground uppercase">
-                          Tanpa proyek
+                          {t["proj.unassigned"]}
                         </p>
                         {unassigned.slice(0, 10).map((c) => (
                           <div key={c.id} className="flex items-center gap-2 py-1">
@@ -154,7 +150,7 @@ export function Projects() {
                               onClick={() => assignProject(c.id, project.id)}
                               className="text-xs text-primary hover:underline"
                             >
-                              Masukkan
+                              {t["proj.moveIn"]}
                             </button>
                           </div>
                         ))}

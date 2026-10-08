@@ -18,34 +18,36 @@ import { useStudio } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { MODE_ICONS } from "./icons";
 import { LumenMark } from "./mark";
+import { useStrings, type StringKey } from "@/lib/i18n";
 
 const WORKSPACE_NAV = [
-  { to: "/dashboard", label: "Dasbor", Icon: LayoutDashboard },
-  { to: "/", label: "Chat", Icon: MessageSquare },
+  { to: "/dashboard", labelKey: "nav.dashboard", Icon: LayoutDashboard },
+  { to: "/", labelKey: "nav.chat", Icon: MessageSquare },
 ] as const;
 
 const ENGINE_NAV = [
-  { to: "/engines/content", label: "Generasi Konten", Icon: PenLine },
-  { to: "/engines/design", label: "Desain", Icon: Palette },
-  { to: "/engines/prototype", label: "Prototipe", Icon: LayoutTemplate },
-  { to: "/engines/code", label: "Coding", Icon: Code2 },
+  { to: "/engines/content", labelKey: "eng.contentTitle", Icon: PenLine },
+  { to: "/engines/design", labelKey: "eng.designTitle", Icon: Palette },
+  { to: "/engines/prototype", labelKey: "eng.prototypeTitle", Icon: LayoutTemplate },
+  { to: "/engines/code", labelKey: "eng.codeTitle", Icon: Code2 },
 ] as const;
 
 const MANAGE_NAV = [
-  { to: "/projects", label: "Proyek", Icon: FolderKanban },
-  { to: "/connection", label: "Koneksi", Icon: Plug },
+  { to: "/projects", labelKey: "proj.title", Icon: FolderKanban },
+  { to: "/connection", labelKey: "conn.title", Icon: Plug },
 ] as const;
 
 function NavLinks({
   items,
   onNavigate,
 }: {
-  items: readonly { to: string; label: string; Icon: typeof LayoutDashboard }[];
+  items: readonly { to: string; labelKey: StringKey; Icon: typeof LayoutDashboard }[];
   onNavigate: () => void;
 }) {
+  const t = useStrings();
   return (
     <nav className="space-y-0.5 pb-4">
-      {items.map(({ to, label, Icon }) => (
+      {items.map(({ to, labelKey, Icon }) => (
         <Link
           key={to}
           to={to}
@@ -61,7 +63,7 @@ function NavLinks({
           className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm"
         >
           <Icon className="size-4 shrink-0" strokeWidth={1.7} />
-          <span className="min-w-0 flex-1 truncate">{label}</span>
+          <span className="min-w-0 flex-1 truncate">{t[labelKey]}</span>
         </Link>
       ))}
     </nav>
@@ -85,6 +87,7 @@ export function Sidebar({ className }: { className?: string }) {
   const selectConversation = useStudio((s) => s.selectConversation);
   const deleteConversation = useStudio((s) => s.deleteConversation);
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
+  const t = useStrings();
 
   const recent = conversations
     .filter((item) => item.modeId === modeId)
@@ -106,18 +109,18 @@ export function Sidebar({ className }: { className?: string }) {
       <div className="px-3 pb-3">
         <Button className="w-full justify-center" onClick={() => newConversation()}>
           <Plus className="size-4" />
-          New {MODES.find((mode) => mode.id === modeId)?.label}
+          {t["nav.newConversation"]} {MODES.find((mode) => mode.id === modeId)?.label}
         </Button>
       </div>
 
       <ScrollArea className="flex-1 px-2">
-        <NavHeading>Ruang Kerja</NavHeading>
+        <NavHeading>{t["nav.workspace"]}</NavHeading>
         <NavLinks items={WORKSPACE_NAV} onNavigate={() => setSidebarOpen(false)} />
-        <NavHeading>Engine</NavHeading>
+        <NavHeading>{t["nav.engines"]}</NavHeading>
         <NavLinks items={ENGINE_NAV} onNavigate={() => setSidebarOpen(false)} />
-        <NavHeading>Kelola</NavHeading>
+        <NavHeading>{t["nav.manage"]}</NavHeading>
         <NavLinks items={MANAGE_NAV} onNavigate={() => setSidebarOpen(false)} />
-        <NavHeading>Menus</NavHeading>
+        <NavHeading>{t["nav.menus"]}</NavHeading>
         <nav className="space-y-0.5 pb-4">
           {MODES.map((mode) => {
             const Icon = MODE_ICONS[mode.id];
@@ -145,11 +148,11 @@ export function Sidebar({ className }: { className?: string }) {
         </nav>
 
         <p className="px-2 pt-2 pb-2 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-          This menu
+          {t["nav.thisMenu"]}
         </p>
         <div className="space-y-0.5 pb-6">
           {recent.length === 0 ? (
-            <p className="px-2.5 py-3 text-xs text-muted-foreground">No drafts yet.</p>
+            <p className="px-2.5 py-3 text-xs text-muted-foreground">{t["nav.noDrafts"]}</p>
           ) : (
             recent.map((item) => (
               <div

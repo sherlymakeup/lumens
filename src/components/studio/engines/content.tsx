@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateStream } from "@/lib/generate";
 import { Markdown } from "@/lib/markdown";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { EngineShell } from "../engine-shell";
 
 const PRESETS = [
@@ -40,12 +41,19 @@ export function ContentEngine() {
   const settings = useStudio((s) => s.settings);
   const [presetId, setPresetId] = useState<string>(PRESETS[0].id);
   const [brief, setBrief] = useState("");
+  const t = useStrings();
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[0];
+  const presetLabels: Record<string, string> = {
+    artikel: t["eng.preset.article"],
+    copy: t["eng.preset.copy"],
+    email: t["eng.preset.email"],
+    translate: t["eng.preset.translate"],
+  };
 
   function stop() {
     abortRef.current?.abort();
@@ -58,7 +66,7 @@ export function ContentEngine() {
     if (!text || busy) return;
     const model = engineModel || settings.model;
     if (!model) {
-      toast.error("Pilih model dulu di halaman Koneksi.");
+      toast.error(t["eng.noModel"]);
       return;
     }
     setBusy(true);
@@ -104,9 +112,9 @@ export function ContentEngine() {
 
   return (
     <EngineShell
-      kicker="Engine"
-      title="Generasi Konten"
-      subtitle="Artikel, copy, email, dan terjemahan yang tetap on-brand."
+      kicker={t["eng.kicker"]}
+      title={t["eng.contentTitle"]}
+      subtitle={t["eng.contentSubtitle"]}
     >
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((p) => (
@@ -116,7 +124,7 @@ export function ContentEngine() {
             size="sm"
             onClick={() => setPresetId(p.id)}
           >
-            {p.label}
+            {presetLabels[p.id] ?? p.label}
           </Button>
         ))}
       </div>
@@ -125,22 +133,22 @@ export function ContentEngine() {
         <Textarea
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="Tulis brief: topik, audiens, sudut pandang…"
+          placeholder={t["eng.briefContent"]}
           rows={4}
-          aria-label="Brief konten"
+          aria-label={t["eng.briefContent"]}
         />
         <div className="mt-3 flex items-center gap-2">
           {busy ? (
             <Button variant="outline" onClick={stop} className="gap-1.5">
-              <Square className="size-4" /> Berhenti
+              <Square className="size-4" /> {t["eng.stop"]}
             </Button>
           ) : (
             <Button onClick={() => void run()} disabled={!brief.trim()} className="gap-1.5">
-              <Sparkles className="size-4" /> Generate
+              <Sparkles className="size-4" /> {t["eng.generate"]}
             </Button>
           )}
           <span className="truncate font-mono text-xs text-muted-foreground">
-            {engineModel || settings.model || "belum ada model"}
+            {engineModel || settings.model || t["eng.noModelShort"]}
           </span>
         </div>
       </div>
@@ -155,7 +163,7 @@ export function ContentEngine() {
         <div className="mt-3 rounded-xl border border-border bg-card p-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-              Hasil
+              {t["eng.result"]}
             </span>
             {output && !busy && (
               <Button
@@ -164,10 +172,10 @@ export function ContentEngine() {
                 className="h-7 gap-1.5"
                 onClick={() => {
                   void navigator.clipboard.writeText(output);
-                  toast.success("Disalin.");
+                  toast.success(t["eng.copied"]);
                 }}
               >
-                <Copy className="size-3.5" /> Salin
+                <Copy className="size-3.5" /> {t["eng.copy"]}
               </Button>
             )}
           </div>
@@ -175,7 +183,7 @@ export function ContentEngine() {
             <Markdown content={output} />
           ) : (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Menulis…
+              <Loader2 className="size-4 animate-spin" /> {t["eng.writing"]}
             </p>
           )}
         </div>

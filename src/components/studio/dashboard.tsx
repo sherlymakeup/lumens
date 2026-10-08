@@ -11,39 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { checkHealth, fetchModels, type HealthStatus } from "@/lib/generate";
+import { useStrings } from "@/lib/i18n";
 import { useStudio } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
 
 const ENGINES = [
-  {
-    id: "content",
-    to: "/engines/content",
-    name: "Generasi Konten",
-    description: "Artikel, copy landing, dan terjemahan yang tetap on-brand.",
-    glyph: "C",
-  },
-  {
-    id: "design",
-    to: "/engines/design",
-    name: "Desain",
-    description: "Dari prompt ke visual — frame hero dan konsep UI di kanvas.",
-    glyph: "D",
-  },
-  {
-    id: "prototype",
-    to: "/engines/prototype",
-    name: "Prototipe",
-    description: "Jelaskan aplikasinya, dapatkan pratinjau yang bisa diklik.",
-    glyph: "P",
-  },
-  {
-    id: "code",
-    to: "/engines/code",
-    name: "Coding",
-    description: "Chat paham repo, diff inline, dan pratinjau sandbox.",
-    glyph: "{ }",
-  },
+  { id: "content", to: "/engines/content", nameKey: "eng.contentTitle", descKey: "eng.contentSubtitle", glyph: "C" },
+  { id: "design", to: "/engines/design", nameKey: "eng.designTitle", descKey: "eng.designSubtitle", glyph: "D" },
+  { id: "prototype", to: "/engines/prototype", nameKey: "eng.prototypeTitle", descKey: "eng.prototypeSubtitle", glyph: "P" },
+  { id: "code", to: "/engines/code", nameKey: "eng.codeTitle", descKey: "eng.codeSubtitle", glyph: "{ }" },
 ] as const;
 
 function StatusDot({ state }: { state: "loading" | "ok" | "error" }) {
@@ -70,6 +47,7 @@ export function Dashboard() {
   const [imageModels, setImageModels] = useState<string[]>([]);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [modelsLoading, setModelsLoading] = useState(true);
+  const t = useStrings();
 
   const loadHealth = useCallback(async () => {
     setHealthLoading(true);
@@ -118,18 +96,16 @@ export function Dashboard() {
 
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-            Ruang Kerja
+          <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            {t["dash.kicker"]}
           </p>
-          <h1 className="font-display mt-2 text-3xl tracking-tight">Dasbor</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Satu pintu ke semua mesin AI — lewat satu gateway: 9Router.
-          </p>
+          <h1 className="font-display mt-2 text-3xl tracking-tight">{t["dash.title"]}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t["dash.subtitle"]}</p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                <Plug className="size-3.5" /> Koneksi
+                <Plug className="size-3.5" /> {t["dash.connection"]}
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <StatusDot state={healthState} />
@@ -140,7 +116,7 @@ export function Dashboard() {
                     9Router · {health.latencyMs}ms
                   </span>
                 ) : (
-                  <span className="text-sm font-medium text-red-500">Terputus</span>
+                  <span className="text-sm font-medium text-red-500">{t["dash.disconnected"]}</span>
                 )}
               </div>
               {healthError ? (
@@ -158,13 +134,13 @@ export function Dashboard() {
                 disabled={healthLoading}
               >
                 <RefreshCw className={cn("size-3.5", healthLoading && "animate-spin")} />
-                Uji koneksi
+                {t["dash.testConnection"]}
               </Button>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                <MessagesSquare className="size-3.5" /> Model Chat
+                <MessagesSquare className="size-3.5" /> {t["dash.chatModels"]}
               </div>
               <div className="mt-3 text-2xl font-semibold tracking-tight">
                 {modelsLoading ? <Skeleton className="h-8 w-12" /> : chatModels.length}
@@ -176,7 +152,7 @@ export function Dashboard() {
 
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                <ImageIcon className="size-3.5" /> Model Gambar
+                <ImageIcon className="size-3.5" /> {t["dash.imageModels"]}
               </div>
               <div className="mt-3 text-2xl font-semibold tracking-tight">
                 {modelsLoading ? <Skeleton className="h-8 w-12" /> : imageModels.length}
@@ -188,8 +164,8 @@ export function Dashboard() {
           </div>
 
           <div className="mt-8 flex items-center justify-between">
-            <h2 className="font-display text-xl tracking-tight">Mesin</h2>
-            <span className="text-xs text-muted-foreground">via 9Router</span>
+            <h2 className="font-display text-xl tracking-tight">{t["dash.engines"]}</h2>
+            <span className="text-xs text-muted-foreground">{t["dash.viaRouter"]}</span>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {ENGINES.map((engine) => (
@@ -202,18 +178,16 @@ export function Dashboard() {
                   <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 font-mono text-sm font-semibold text-primary">
                     {engine.glyph}
                   </span>
-                  <span className="flex-1 text-sm font-medium">{engine.name}</span>
+                  <span className="flex-1 text-sm font-medium">{t[engine.nameKey as keyof typeof t]}</span>
                   <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {engine.description}
+                  {t[engine.descKey as keyof typeof t]}
                 </p>
               </Link>
             ))}
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Butuh NOVITA_API_KEY di environment server untuk panel sandbox engine Coding.
-          </p>
+          <p className="mt-4 text-xs text-muted-foreground">{t["dash.sandboxNote"]}</p>
         </div>
       </main>
     </div>

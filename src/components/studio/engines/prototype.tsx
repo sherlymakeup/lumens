@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { generateStream } from "@/lib/generate";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { EngineShell } from "../engine-shell";
 
 const SYSTEM =
@@ -20,6 +21,7 @@ export function PrototypeEngine() {
   const engineModel = useStudio((s) => s.engineModels.prototype);
   const settings = useStudio((s) => s.settings);
   const [brief, setBrief] = useState("");
+  const t = useStrings();
   const [html, setHtml] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function PrototypeEngine() {
     if (!text || busy) return;
     const model = engineModel || settings.model;
     if (!model) {
-      toast.error("Pilih model dulu di halaman Koneksi.");
+      toast.error(t["eng.noModel"]);
       return;
     }
     setBusy(true);
@@ -68,7 +70,7 @@ export function PrototypeEngine() {
         },
         onDone: () => {
           const doc = extractHtml(assembled);
-          if (!doc) setError("Model tidak mengembalikan dokumen HTML yang valid.");
+          if (!doc) setError(t["eng.invalidHtml"]);
           else setHtml(doc);
           setBusy(false);
           abortRef.current = null;
@@ -84,30 +86,30 @@ export function PrototypeEngine() {
 
   return (
     <EngineShell
-      kicker="Engine"
-      title="Prototipe"
-      subtitle="Jelaskan aplikasinya — dapatkan pratinjau HTML yang bisa diklik."
+      kicker={t["eng.kicker"]}
+      title={t["eng.prototypeTitle"]}
+      subtitle={t["eng.prototypeSubtitle"]}
     >
       <div className="rounded-xl border border-border bg-card p-4">
         <Textarea
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="cth: landing page untuk kedai kopi, hero + menu + form reservasi…"
+          placeholder={t["eng.briefPrototype"]}
           rows={3}
-          aria-label="Brief prototipe"
+          aria-label={t["eng.briefPrototype"]}
         />
         <div className="mt-3 flex items-center gap-2">
           {busy ? (
             <Button variant="outline" onClick={stop} className="gap-1.5">
-              <Square className="size-4" /> Berhenti
+              <Square className="size-4" /> {t["eng.stop"]}
             </Button>
           ) : (
             <Button onClick={() => void run()} disabled={!brief.trim()} className="gap-1.5">
-              <Code2 className="size-4" /> Bangun prototipe
+              <Code2 className="size-4" /> {t["eng.buildPrototype"]}
             </Button>
           )}
           <span className="truncate font-mono text-xs text-muted-foreground">
-            {engineModel || settings.model || "belum ada model"}
+            {engineModel || settings.model || t["eng.noModelShort"]}
           </span>
         </div>
       </div>
@@ -120,7 +122,7 @@ export function PrototypeEngine() {
 
       {busy && !html && (
         <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Merakit HTML…
+          <Loader2 className="size-4 animate-spin" /> {t["eng.building"]}
         </p>
       )}
 
@@ -128,14 +130,14 @@ export function PrototypeEngine() {
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           <div className="flex items-center justify-between border-b border-border bg-card px-3 py-2">
             <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-              Pratinjau
+              {t["eng.preview"]}
             </span>
             <a
               href={`data:text/html;charset=utf-8,${encodeURIComponent(html)}`}
               download="prototipe.html"
               className="text-xs text-primary hover:underline"
             >
-              Unduh HTML
+              {t["eng.downloadHtml"]}
             </a>
           </div>
           <iframe

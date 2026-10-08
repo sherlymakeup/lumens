@@ -2,6 +2,7 @@ export type Provider = "custom";
 export type ThemeMode = "dark" | "light" | "system";
 export type FontSize = "sm" | "md" | "lg";
 export type Density = "comfortable" | "compact";
+export type Lang = "id" | "en";
 export type Role = "system" | "user" | "assistant";
 
 export type ModeId =
@@ -35,6 +36,7 @@ export type StudioSettings = {
   theme: ThemeMode;
   fontSize: FontSize;
   density: Density;
+  lang: Lang;
   sendWithEnter: boolean;
   showMarkdown: boolean;
   systemPromptOverride: string;
@@ -121,6 +123,7 @@ export const DEFAULT_SETTINGS: StudioSettings = {
   theme: "dark",
   fontSize: "md",
   density: "comfortable",
+  lang: "id",
   sendWithEnter: true,
   showMarkdown: true,
   systemPromptOverride: "",

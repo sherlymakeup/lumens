@@ -17,17 +17,19 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchModels } from "@/lib/generate";
+import { LANGS, useStrings, type StringKey } from "@/lib/i18n";
 import { useStudio } from "@/lib/store";
 import { DEFAULT_SETTINGS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [
-  { id: "connection", label: "Connection" },
-  { id: "generation", label: "Generation" },
-  { id: "appearance", label: "Appearance" },
-  { id: "editor", label: "Editor" },
-  { id: "system", label: "System" },
-  { id: "data", label: "Data" },
+  { id: "connection", labelKey: "settings.connection" },
+  { id: "generation", labelKey: "settings.generation" },
+  { id: "appearance", labelKey: "settings.appearance" },
+  { id: "editor", labelKey: "settings.editor" },
+  { id: "language", labelKey: "settings.language" },
+  { id: "system", labelKey: "settings.system" },
+  { id: "data", labelKey: "settings.data" },
 ] as const;
 
 function Field({
@@ -67,6 +69,7 @@ export function SettingsPanel({
   const clearAll = useStudio((s) => s.clearAll);
   const conversations = useStudio((s) => s.conversations);
   const [testing, setTesting] = useState(false);
+  const t = useStrings();
 
   async function testConnection() {
     setTesting(true);
@@ -104,9 +107,9 @@ export function SettingsPanel({
       <SheetContent title="Settings" className="p-0">
         <SheetHeader>
           <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-            Settings
+            {t["settings.kicker"]}
           </p>
-          <h2 className="font-display text-2xl tracking-tight">Studio</h2>
+          <h2 className="font-display text-2xl tracking-tight">{t["settings.title"]}</h2>
         </SheetHeader>
         <div className="flex min-h-0 flex-1">
           <nav className="hidden w-36 shrink-0 flex-col gap-0.5 border-r border-border p-3 sm:flex">
@@ -122,7 +125,7 @@ export function SettingsPanel({
                     : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
                 )}
               >
-                {item.label}
+                {t[item.labelKey as StringKey]}
               </button>
             ))}
           </nav>
@@ -138,7 +141,7 @@ export function SettingsPanel({
                     section === item.id ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                   )}
                 >
-                  {item.label}
+                  {t[item.labelKey as StringKey]}
                 </button>
               ))}
             </div>
@@ -186,7 +189,7 @@ export function SettingsPanel({
                     </div>
                   </Field>
                   <Button variant="outline" onClick={testConnection} disabled={testing}>
-                    {testing ? "Testing…" : "Test connection"}
+                    {testing ? t["settings.testing"] : t["settings.testConnection"]}
                   </Button>
                 </>
               ) : null}
@@ -331,6 +334,29 @@ export function SettingsPanel({
                       checked={settings.showMarkdown}
                       onCheckedChange={(showMarkdown) => setSettings({ showMarkdown })}
                     />
+                  </div>
+                </>
+              ) : null}
+
+              {section === "language" ? (
+                <>
+                  <div>
+                    <h3 className="text-sm font-medium">{t["settings.language"]}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t["settings.languageHint"]}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {LANGS.map((lang) => (
+                      <Button
+                        key={lang.id}
+                        variant={settings.lang === lang.id ? "default" : "outline"}
+                        onClick={() => setSettings({ lang: lang.id })}
+                        className="flex-1"
+                      >
+                        {lang.label}
+                      </Button>
+                    ))}
                   </div>
                 </>
               ) : null}

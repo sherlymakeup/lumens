@@ -11,6 +11,7 @@ import {
 import { checkHealth } from "@/lib/generate";
 import { MODE_BY_ID } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function HealthChip() {
@@ -61,6 +62,7 @@ export function Header({ models }: { models: string[] }) {
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
   const setSettingsOpen = useStudio((s) => s.setSettingsOpen);
   const mode = MODE_BY_ID[modeId];
+  const t = useStrings();
   const options = models;
   const modelValue = options.includes(settings.model) ? settings.model : undefined;
 
@@ -70,7 +72,7 @@ export function Header({ models }: { models: string[] }) {
         variant="ghost"
         size="icon"
         className="md:hidden"
-        aria-label="Open menu"
+        aria-label={t["header.openMenu"]}
         onClick={() => setSidebarOpen(true)}
       >
         <Menu className="size-5" />
@@ -83,7 +85,7 @@ export function Header({ models }: { models: string[] }) {
       {options.length > 0 ? (
         <Select value={modelValue} onValueChange={(model) => setSettings({ model })}>
           <SelectTrigger className="h-9 w-[9.5rem] bg-transparent sm:w-44" aria-label="Model">
-            <SelectValue placeholder="Pilih model" />
+            <SelectValue placeholder={t["header.pickModel"]} />
           </SelectTrigger>
           <SelectContent>
             {options.map((model) => (
@@ -96,15 +98,15 @@ export function Header({ models }: { models: string[] }) {
       ) : (
         <span
           className="hidden max-w-36 truncate px-1 text-xs text-muted-foreground sm:block"
-          title={settings.model || "Buka Settings lalu Test connection untuk memuat daftar model"}
+          title={settings.model || t["header.noModelsHint"]}
         >
-          {settings.model || "Belum ada model"}
+          {settings.model || t["header.noModels"]}
         </span>
       )}
       <Button
         variant="outline"
         size="icon"
-        aria-label="Open settings"
+        aria-label={t["header.openSettings"]}
         onClick={() => setSettingsOpen(true)}
       >
         <Settings2 className="size-4" />

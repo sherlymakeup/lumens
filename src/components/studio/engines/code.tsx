@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateStream, runSandboxCommand, type SandboxResult } from "@/lib/generate";
 import { Markdown } from "@/lib/markdown";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { EngineShell } from "../engine-shell";
 
@@ -21,6 +22,7 @@ export function CodeEngine() {
 
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [draft, setDraft] = useState("");
+  const t = useStrings();
   const [busy, setBusy] = useState(false);
   const [streaming, setStreaming] = useState("");
   const abortRef = useRef<AbortController | null>(null);
@@ -41,7 +43,7 @@ export function CodeEngine() {
     if (!text || busy) return;
     const model = engineModel || settings.model;
     if (!model) {
-      toast.error("Pilih model dulu di halaman Koneksi.");
+      toast.error(t["eng.noModel"]);
       return;
     }
     setBusy(true);
@@ -106,19 +108,19 @@ export function CodeEngine() {
 
   return (
     <EngineShell
-      kicker="Engine"
-      title="Coding"
-      subtitle="Chat paham kode + eksekusi aman di Novita Sandbox."
+      kicker={t["eng.kicker"]}
+      title={t["eng.codeTitle"]}
+      subtitle={t["eng.codeSubtitle"]}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="flex min-h-[420px] flex-col rounded-xl border border-border bg-card">
           <div className="border-b border-border px-4 py-2.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-            Chat · <span className="font-mono normal-case">{engineModel || "belum ada model"}</span>
+            Chat · <span className="font-mono normal-case">{engineModel || t["eng.noModelShort"]}</span>
           </div>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             {entries.length === 0 && !streaming && (
               <p className="text-sm text-muted-foreground">
-                Tanya soal kode, minta review, atau minta dibuatkan fungsi…
+                {t["eng.askCode"]}
               </p>
             )}
             {entries.map((entry, i) => (
@@ -154,10 +156,10 @@ export function CodeEngine() {
                     void ask();
                   }
                 }}
-                placeholder="Tulis pertanyaan kode…"
+                placeholder={t["eng.codePlaceholder"]}
                 rows={2}
                 className="resize-none"
-                aria-label="Pesan kode"
+                aria-label={t["eng.codePlaceholder"]}
               />
               {busy ? (
                 <Button variant="outline" size="icon" onClick={stop} aria-label="Berhenti">
@@ -165,7 +167,7 @@ export function CodeEngine() {
                 </Button>
               ) : (
                 <Button onClick={() => void ask()} disabled={!draft.trim()}>
-                  Kirim
+                  {t["eng.send"]}
                 </Button>
               )}
             </div>
@@ -179,7 +181,7 @@ export function CodeEngine() {
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-black/40 p-4 font-mono text-xs">
             {sandboxLog.length === 0 && (
               <p className="text-muted-foreground">
-                Jalankan perintah di sandbox terisolasi. cth:{" "}
+                {t["eng.sandboxHint"]}{" "}
                 <span className="text-foreground">node -v</span>
               </p>
             )}
@@ -222,7 +224,7 @@ export function CodeEngine() {
               </Button>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Butuh NOVITA_API_KEY di environment server.
+              {t["eng.sandboxNeedKey"]}
             </p>
           </div>
         </section>

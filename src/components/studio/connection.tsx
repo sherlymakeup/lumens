@@ -12,6 +12,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchModels, testModelConnection } from "@/lib/generate";
+import { useStrings } from "@/lib/i18n";
 import { useStudio } from "@/lib/store";
 import type { EngineId } from "@/lib/types";
 import { ENGINE_IDS, ENGINE_LABELS } from "@/lib/types";
@@ -36,6 +37,7 @@ export function Connection() {
   const [newId, setNewId] = useState("");
   const [testState, setTestState] = useState<TestState>("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
+  const t = useStrings();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,7 +66,9 @@ export function Connection() {
       const result = await testModelConnection(id);
       addCustomModel({ id: result.id, type: result.type, addedAt: Date.now() });
       setTestState("ok");
-      setTestMessage(`"${result.id}" terdaftar sebagai model ${result.type === "image" ? "gambar" : "chat"}.`);
+      setTestMessage(
+        `"${result.id}" ${t["conn.addedOk"]} ${t[result.type === "image" ? "conn.typeImage" : "conn.typeChat"]}.`,
+      );
       setNewId("");
     } catch (error) {
       setTestState("error");
@@ -91,27 +95,24 @@ export function Connection() {
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-            Pengaturan
+            {t["conn.kicker"]}
           </p>
-          <h1 className="font-display mt-2 text-3xl tracking-tight">Koneksi</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Satu gateway: 9Router. API key tersimpan aman di environment server — tidak ada
-            input key di UI.
-          </p>
+          <h1 className="font-display mt-2 text-3xl tracking-tight">{t["conn.title"]}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t["conn.subtitle"]}</p>
 
           {loadError && (
             <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm">
               {loadError}{" "}
               <Button variant="link" className="h-auto p-0 text-sm" onClick={() => void load()}>
-                Coba lagi
+                {t["conn.retry"]}
               </Button>
             </div>
           )}
 
           <section className="mt-6">
             <h2 className="font-display text-lg tracking-tight">
-              Tambah model{" "}
-              <span className="text-xs font-normal text-muted-foreground">by ID + test koneksi</span>
+              {t["conn.addModel"]}{" "}
+              <span className="text-xs font-normal text-muted-foreground">{t["conn.addModelHint"]}</span>
             </h2>
             <div className="mt-3 flex gap-2">
               <Input
@@ -124,7 +125,7 @@ export function Connection() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void handleAdd();
                 }}
-                placeholder="cth: ag/gemini-3.8-flash-low"
+                placeholder={t["conn.placeholder"]}
                 className="font-mono"
                 aria-label="ID model baru"
               />
@@ -134,7 +135,7 @@ export function Connection() {
                 ) : (
                   <Plus className="size-4" />
                 )}
-                Test & tambah
+                {t["conn.testAdd"]}
               </Button>
             </div>
             {testMessage && (
@@ -150,10 +151,8 @@ export function Connection() {
           </section>
 
           <section className="mt-8">
-            <h2 className="font-display text-lg tracking-tight">Pemetaan engine</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Pilih model 9Router yang dipakai tiap engine.
-            </p>
+            <h2 className="font-display text-lg tracking-tight">{t["conn.mapping"]}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t["conn.mappingHint"]}</p>
             <div className="mt-3 space-y-2">
               {ENGINE_IDS.map((engine: EngineId) => {
                 const isImage = engine === "design";
@@ -172,7 +171,7 @@ export function Connection() {
                       onValueChange={(model) => setEngineModel(engine, model)}
                     >
                       <SelectTrigger className="font-mono text-xs" aria-label={`Model ${ENGINE_LABELS[engine]}`}>
-                        <SelectValue placeholder="Pilih model" />
+                        <SelectValue placeholder={t["conn.chooseModel"]} />
                       </SelectTrigger>
                       <SelectContent>
                         {options.map((model) => (
@@ -190,9 +189,9 @@ export function Connection() {
 
           <section className="mt-8">
             <h2 className="font-display text-lg tracking-tight">
-              Model chat{" "}
+              {t["conn.modelChat"]}{" "}
               <span className="text-xs font-normal text-muted-foreground">
-                {loading ? "…" : `${allChat.length} model`}
+                {loading ? "…" : `${allChat.length} ${t["conn.modelsUnit"]}`}
               </span>
             </h2>
             <ModelList
@@ -205,9 +204,9 @@ export function Connection() {
 
           <section className="mt-8 pb-8">
             <h2 className="font-display text-lg tracking-tight">
-              Model gambar{" "}
+              {t["conn.modelImage"]}{" "}
               <span className="text-xs font-normal text-muted-foreground">
-                {loading ? "…" : `${allImage.length} model`}
+                {loading ? "…" : `${allImage.length} ${t["conn.modelsUnit"]}`}
               </span>
             </h2>
             <ModelList
@@ -234,6 +233,7 @@ function ModelList({
   customIds: Set<string>;
   onRemove: (id: string) => void;
 }) {
+  const t = useStrings();
   if (loading) {
     return (
       <div className="mt-3 space-y-2">
@@ -244,7 +244,7 @@ function ModelList({
     );
   }
   if (models.length === 0) {
-    return <p className="mt-3 text-sm text-muted-foreground">Belum ada model.</p>;
+    return <p className="mt-3 text-sm text-muted-foreground">{t["conn.noModels"]}</p>;
   }
   return (
     <ul className="mt-3 space-y-1.5">
@@ -258,7 +258,7 @@ function ModelList({
             <span className="min-w-0 flex-1 truncate font-mono text-xs">{model}</span>
             {custom && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                custom
+                {t["conn.custom"]}
               </span>
             )}
             {custom && (
