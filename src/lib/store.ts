@@ -35,6 +35,7 @@ type StudioState = {
   setSettingsOpen: (open: boolean) => void;
   setSettingsSection: (section: string) => void;
   newConversation: (modeId?: ModeId) => string;
+  forkConversation: (conversationId: string, messageId: string) => string | null;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   setExtras: (conversationId: string, extras: Record<string, string>) => void;
@@ -117,6 +118,29 @@ export const useStudio = create<StudioState>()(
           sidebarOpen: false,
         }));
         return conversation.id;
+      },
+      forkConversation: (conversationId, messageId) => {
+        const source = get().conversations.find((item) => item.id === conversationId);
+        if (!source) return null;
+        const index = source.messages.findIndex((message) => message.id === messageId);
+        if (index < 0) return null;
+        const now = Date.now();
+        const suffix = get().settings.lang === "id" ? " (cabang)" : " (branch)";
+        const forked: Conversation = {
+          ...source,
+          id: uid(),
+          title: `${source.title}${suffix}`,
+          messages: source.messages.slice(0, index + 1),
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((state) => ({
+          conversations: [forked, ...state.conversations],
+          activeId: forked.id,
+          modeId: forked.modeId,
+          sidebarOpen: false,
+        }));
+        return forked.id;
       },
       selectConversation: (id) => {
         const found = get().conversations.find((item) => item.id === id);

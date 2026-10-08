@@ -1,5 +1,5 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
-import { CornerDownLeft, Square } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ArrowUp, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,7 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useStrings } from "@/lib/i18n";
 import { MODE_BY_ID } from "@/lib/modes";
+import { useStudio } from "@/lib/store";
 import type { ModeId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -34,13 +36,16 @@ export function Composer({
   disabled?: boolean;
 }) {
   const mode = MODE_BY_ID[modeId];
+  const model = useStudio((s) => s.settings.model);
+  const t = useStrings();
   const ref = useRef<HTMLTextAreaElement>(null);
+  const [focus, setFocus] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "0px";
-    el.style.height = `${Math.min(el.scrollHeight, 280)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
   }, [value]);
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -62,13 +67,17 @@ export function Composer({
     }
   }
 
-  const sendOnEnter = typeof document !== "undefined" && document.documentElement.dataset.sendEnter === "1";
-
   return (
     <div className="mx-auto w-full max-w-3xl shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4">
-      <div className="rounded-2xl bg-card p-2 shadow-[var(--shadow-border)]">
+      <div
+        data-focus={focus}
+        className={cn(
+          "rounded-2xl border border-border bg-card shadow-[var(--shadow-border)] transition-[border-color,box-shadow] duration-200",
+          "data-[focus=true]:border-primary/60 data-[focus=true]:ring-4 data-[focus=true]:ring-primary/15",
+        )}
+      >
         {mode.extras.length > 0 ? (
-          <div className="flex flex-wrap gap-2 px-2 pt-1.5 pb-2">
+          <div className="flex flex-wrap gap-2 px-3 pt-2.5">
             {mode.extras.map((field) => (
               <label key={field.key} className="flex items-center gap-2">
                 <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -99,35 +108,42 @@ export function Composer({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
+          onFocus={() => setFocus(true)}
+          onBlur={() => setFocus(false)}
           placeholder={mode.placeholder}
           disabled={disabled}
-          rows={3}
-          className={cn(
-            "max-h-70 min-h-24 w-full resize-none bg-transparent px-3 py-2 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50",
-          )}
+          rows={1}
+          className="max-h-55 min-h-14 w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
         />
 
-        <div className="flex items-center justify-between gap-3 px-2 pt-1 pb-1">
-          <p className="text-xs text-muted-foreground">
-            {streaming
-              ? "Generating…"
-              : sendOnEnter
-                ? "Enter untuk kirim · Shift + Enter baris baru"
-                : "Ctrl/⌘ + Enter untuk kirim"}
-          </p>
+        <div className="flex flex-wrap items-center gap-2 px-2 pt-1.5 pb-2">
+          <span className="ml-1 hidden min-w-0 items-center gap-1.5 sm:inline-flex">
+            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+            <span className="truncate font-mono text-[11px] text-muted-foreground">
+              {model || t["header.noModels"]}
+            </span>
+          </span>
+          <div className="flex-1" />
           {streaming ? (
-            <Button variant="outline" onClick={onStop} className="h-10 min-w-22">
+            <Button variant="outline" onClick={onStop} className="h-9 gap-1.5 px-3.5">
               <Square className="size-3.5 fill-current" />
-              Stop
+              {t["eng.stop"]}
             </Button>
           ) : (
-            <Button onClick={onSubmit} disabled={disabled || !value.trim()} className="h-10 min-w-22">
-              Send
-              <CornerDownLeft className="size-3.5" />
+            <Button
+              onClick={onSubmit}
+              disabled={disabled || !value.trim()}
+              className="h-9 gap-1.5 px-3.5"
+            >
+              {t["eng.send"]}
+              <ArrowUp className="size-4" />
             </Button>
           )}
         </div>
       </div>
+      <p className="mt-2 truncate text-center font-mono text-[11px] text-muted-foreground">
+        XDIRGA TOOLS · {model || t["header.noModels"]}
+      </p>
     </div>
   );
 }

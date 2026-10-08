@@ -48,6 +48,8 @@ export type ChatMessage = {
   content: string;
   createdAt: number;
   error?: string;
+  feedback?: "up" | "down";
+  elapsedMs?: number;
 };
 
 export type Conversation = {

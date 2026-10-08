@@ -143,6 +143,7 @@ export function Studio() {
     const controller = new AbortController();
     abortRef.current = controller;
     let assembled = "";
+    const startedAt = Date.now();
 
     await generateStream(
       {
@@ -169,6 +170,7 @@ export function Studio() {
           patchMessage(id, assistant.id, { content: assembled });
         },
         onDone: () => {
+          patchMessage(id, assistant.id, { elapsedMs: Date.now() - startedAt });
           setStreamingId(null);
           setThinking(false);
           abortRef.current = null;
@@ -177,6 +179,7 @@ export function Studio() {
           patchMessage(id, assistant.id, {
             error: message,
             content: assembled,
+            elapsedMs: Date.now() - startedAt,
           });
           setStreamingId(null);
           setThinking(false);
