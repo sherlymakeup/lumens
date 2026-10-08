@@ -46,7 +46,8 @@ export const Route = createFileRoute("/api/sandbox/execute")({
         let sandbox: Sandbox | null = null;
         try {
           const novita = new Novita({ apiKey });
-          sandbox = await novita.sandbox.create();
+          const templateId = process.env.NOVITA_TEMPLATE_ID?.trim() || "base";
+          sandbox = await novita.sandbox.create({ template: templateId });
           const result = await sandbox.commands.run(command, {
             timeoutMs: parsed.timeoutMs ?? 30_000,
           });

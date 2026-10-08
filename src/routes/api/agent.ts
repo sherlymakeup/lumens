@@ -177,7 +177,15 @@ export const Route = createFileRoute("/api/agent")({
                 }
               }
               if (!sandbox) {
-                sandbox = await novita.sandbox.create({ timeoutMs: SESSION_IDLE_MS });
+                // Template ID is configurable via NOVITA_TEMPLATE_ID so the
+                // account owner can point at a bigger template (e.g. 2GB RAM).
+                // The SDK binds CPU/RAM to the template — there is no
+                // per-create memory option. Default "base" = 2 CPU / 512MB.
+                const templateId = process.env.NOVITA_TEMPLATE_ID?.trim() || "base";
+                sandbox = await novita.sandbox.create({
+                  template: templateId,
+                  timeoutMs: SESSION_IDLE_MS,
+                });
                 sandboxId = sandbox.sandboxId;
               }
               // Refresh the idle timeout on every use.

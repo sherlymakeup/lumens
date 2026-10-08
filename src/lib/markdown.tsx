@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { highlightCode } from "./highlight";
+import { tryParseTable } from "./table-parse";
 import { cn } from "./utils";
 
 const ESC: Record<string, string> = {
@@ -31,6 +32,7 @@ type Block =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "quote"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "table"; headers: string[]; rows: string[][] }
   | { type: "hr" }
   | { type: "p"; text: string };
 
@@ -55,6 +57,12 @@ function parseBlocks(source: string): Block[] {
     if (/^---+$/.test(line.trim())) {
       blocks.push({ type: "hr" });
       i += 1;
+      continue;
+    }
+    const table = tryParseTable(lines, i);
+    if (table) {
+      blocks.push({ type: "table", headers: table.block.headers, rows: table.block.rows });
+      i = table.next;
       continue;
     }
     const heading = /^(#{1,3})\s+(.+)$/.exec(line);
@@ -110,6 +118,7 @@ function isFenceOrBlock(line: string) {
     line.startsWith("> ") ||
     /^\s*[-*]\s+/.test(line) ||
     /^\s*\d+\.\s+/.test(line) ||
+    /^\s*\|/.test(line) ||
     /^---+$/.test(line.trim())
   );
 }
@@ -207,6 +216,36 @@ export function Markdown({
         }
         if (block.type === "hr") {
           return <hr key={index} className="md-hr" />;
+        }
+        if (block.type === "table") {
+          return (
+            <div key={index} className="md-table-wrap">
+              <table className="md-table">
+                <thead>
+                  <tr>
+                    {block.headers.map((header, headerIndex) => (
+                      <th
+                        key={headerIndex}
+                        dangerouslySetInnerHTML={{ __html: inlineToHtml(header) }}
+                      />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {row.map((cell, cellIndex) => (
+                        <td
+                          key={cellIndex}
+                          dangerouslySetInnerHTML={{ __html: inlineToHtml(cell) }}
+                        />
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
         }
         return (
           <p
