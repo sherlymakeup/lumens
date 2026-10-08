@@ -165,6 +165,26 @@ test("generateAgent routes memory tool kinds", async () => {
   }
 });
 
+test("generateAgent routes web_read as search kind", async () => {
+  const restore = mockFetch(async () =>
+    sseStream([
+      { type: "tool_call", kind: "search", command: "https://example.com/a" },
+      { type: "tool_result", output: "Isi https://example.com/a:\nHalo", exitCode: 0 },
+      { type: "done", sandboxId: "sbx-1" },
+    ]),
+  );
+  const seen = { calls: [] };
+  try {
+    await generateAgent(BASE_REQ, {
+      ...collector().handlers,
+      onToolCall: (command, kind) => seen.calls.push([command, kind]),
+    });
+    assert.deepEqual(seen.calls, [["https://example.com/a", "search"]]);
+  } finally {
+    restore();
+  }
+});
+
 test("generateAgent routes file tool kinds and passes files through", async () => {
   const file = { name: "laporan.md", mime: "text/markdown", base64: "IyBIYWxv", size: 6 };
   const restore = mockFetch(async () =>

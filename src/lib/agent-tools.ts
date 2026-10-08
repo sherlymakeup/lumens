@@ -1,4 +1,4 @@
-import { imagesGenerationsUrl } from "./safe-url.ts";
+import { imagesGenerationsUrl, normalizeBaseUrl } from "./safe-url.ts";
 
 // Image generation inside the agent always goes through the Gemini image
 // model — the user's chat model is never switched, so it "returns" to the
@@ -147,4 +147,73 @@ export async function runImageGeneration(args: {
     return { ok: false, text: "Gateway tidak mengembalikan gambar.", images: [] };
   }
   return { ok: true, text: `Gambar berhasil dibuat (1 gambar, model Gemini).`, images };
+}
+
+// ---------- web_read (Tavily Extract) ----------
+export type ReadOutcome = { ok: boolean; text: string };
+
+const TAVILY_EXTRACT_URL = "https://api.tavily.com/extract";
+
+function assertPublicHttps(raw: string): string {
+  const normalized = normalizeBaseUrl(raw);
+  const parsed = new URL(normalized);
+  if (parsed.protocol !== "https:") {
+    throw new Error("URL harus memakai https.");
+  }
+  return normalized;
+}
+
+export async function runWebRead(
+  rawUrl: string,
+  apiKey: string | undefined,
+  maxChars = 6000,
+): Promise<ReadOutcome> {
+  const input = rawUrl.trim().slice(0, 2000);
+  if (!input) return { ok: false, text: "URL kosong." };
+  let url: string;
+  try {
+    url = assertPublicHttps(input);
+  } catch {
+    return { ok: false, text: `URL tidak diizinkan: ${input.slice(0, 120)}` };
+  }
+  if (!apiKey) {
+    return {
+      ok: false,
+      text: "Web read belum dikonfigurasi: tambahkan TAVILY_API_KEY di environment server.",
+    };
+  }
+  let res: Response;
+  try {
+    res = await fetch(TAVILY_EXTRACT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey,
+        urls: [url],
+        extract_depth: "basic",
+        format: "markdown",
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      text: `Web read gagal dijangkau: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  if (!res.ok) {
+    return { ok: false, text: `Web read error ${res.status}.` };
+  }
+  const body = (await res.json().catch(() => null)) as {
+    results?: { url?: string; content?: string; raw_content?: string }[];
+  } | null;
+  const first = (body?.results ?? [])[0];
+  const raw = (first?.content || first?.raw_content || "").replace(/\s+/g, " ").trim();
+  if (!raw) {
+    return { ok: false, text: `Gagal mengekstrak isi halaman: ${url}` };
+  }
+  const limit = Math.min(Math.max(maxChars, 500), 12000);
+  const clipped = raw.length > limit;
+  const text = clipped ? raw.slice(0, limit) + "\n…[konten dipotong]" : raw;
+  return { ok: true, text: `Isi ${url}:\n${text}` };
 }

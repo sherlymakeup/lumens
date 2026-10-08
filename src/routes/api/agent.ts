@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { Novita, type Sandbox } from "novita-sandbox";
 import { chatCompletionsUrl } from "@/lib/safe-url";
-import { runImageGeneration, runWebSearch } from "@/lib/agent-tools";
+import { runImageGeneration, runWebRead, runWebSearch } from "@/lib/agent-tools";
 import { deleteMemory, memoryEnv, saveMemory, searchMemories } from "@/lib/agent-memory";
 import { fetchSandboxFile } from "@/lib/agent-files";
 import { clamp } from "@/lib/utils";
@@ -43,6 +43,9 @@ Rules:
 - When the user asks you to compute, inspect, create, run, or verify something with the computer, USE sandbox_exec — don't just describe what to do.
 - When the user asks you to draw/create/make an image or picture, USE generate_image with a detailed English prompt.
 - When the user asks about news, prices, schedules, or recent events, USE web_search first.
+- web_search returns short snippets with URLs. When a snippet isn't enough,
+  use web_read on the 1-3 most relevant URLs to read the full page. Don't
+  read every result — pick the ones most likely to answer.
 - Keep commands focused and check their output before the next step.
 - The sandbox persists for this conversation (files you create stay available), with a 5-minute idle timeout.
 - Never exfiltrate secrets: there are none in the sandbox; don't go looking for any.
@@ -106,6 +109,24 @@ const TOOLS = [
           maxResults: { type: "number", description: "How many results (default 5, max 8)" },
         },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "web_read",
+      description:
+        "Read the full text content of a web page (https URL, usually from web_search results). Use when a search snippet isn't enough.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "The https URL of the page to read",
+          },
+        },
+        required: ["url"],
       },
     },
   },
@@ -432,6 +453,16 @@ export const Route = createFileRoute("/api/agent")({
                       query,
                       process.env.TAVILY_API_KEY?.trim() || undefined,
                       maxResults,
+                    );
+                    const output = clip(outcome.text);
+                    send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
+                    convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                  } else if (tc.name === "web_read") {
+                    const url = String(args.url ?? "").slice(0, 2000);
+                    send({ type: "tool_call", kind: "search", command: url });
+                    const outcome = await runWebRead(
+                      url,
+                      process.env.TAVILY_API_KEY?.trim() || undefined,
                     );
                     const output = clip(outcome.text);
                     send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
