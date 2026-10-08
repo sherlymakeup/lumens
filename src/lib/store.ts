@@ -41,6 +41,7 @@ type StudioState = {
   setExtras: (conversationId: string, extras: Record<string, string>) => void;
   addMessage: (conversationId: string, message: ChatMessage) => void;
   patchMessage: (conversationId: string, messageId: string, patch: Partial<ChatMessage>) => void;
+  setSandboxId: (conversationId: string, sandboxId: string) => void;
   setStreamingId: (id: string | null) => void;
   clearAll: () => void;
   setEngineModel: (engine: EngineId, model: string) => void;
@@ -200,6 +201,12 @@ export const useStudio = create<StudioState>()(
         }));
       },
       setStreamingId: (streamingId) => set({ streamingId }),
+      setSandboxId: (conversationId, sandboxId) =>
+        set((state) => ({
+          conversations: state.conversations.map((item) =>
+            item.id === conversationId ? { ...item, sandboxId } : item,
+          ),
+        })),
       clearAll: () => set({ conversations: [], activeId: null, streamingId: null }),
       setEngineModel: (engine, model) =>
         set((state) => ({ engineModels: { ...state.engineModels, [engine]: model } })),

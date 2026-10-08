@@ -104,6 +104,117 @@ export async function generateStream(request: GenerateRequest, handlers: StreamH
   if (!failed) handlers.onDone();
 }
 
+export type AgentHandlers = {
+  onText: (delta: string) => void;
+  onToolCall: (command: string) => void;
+  onToolResult: (output: string, exitCode: number) => void;
+  onDone: (sandboxId?: string) => void;
+  onError: (message: string) => void;
+  signal?: AbortSignal;
+};
+
+export async function generateAgent(
+  request: {
+    messages: { role: "system" | "user" | "assistant"; content: string }[];
+    model: string;
+    sandboxId?: string;
+    params: {
+      temperature: number;
+      maxTokens: number;
+      topP: number;
+      frequencyPenalty: number;
+      presencePenalty: number;
+    };
+  },
+  handlers: AgentHandlers,
+) {
+  let response: Response;
+  try {
+    response = await fetch("/api/agent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: request.messages,
+        sandboxId: request.sandboxId,
+        connection: { provider: "custom", model: request.model },
+        params: request.params,
+      }),
+      signal: handlers.signal,
+    });
+  } catch (error) {
+    if (handlers.signal?.aborted) {
+      handlers.onDone(request.sandboxId);
+      return;
+    }
+    handlers.onError(error instanceof Error ? error.message : "Network error");
+    return;
+  }
+
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      /* keep default */
+    }
+    handlers.onError(message);
+    return;
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    handlers.onError("No response stream.");
+    return;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let done = false;
+  try {
+    while (true) {
+      const { done: readerDone, value } = await reader.read();
+      if (readerDone) break;
+      buffer += decoder.decode(value, { stream: true });
+      buffer = parseSseBuffer(buffer, (payload) => {
+        if (payload === "[DONE]" || done) return;
+        try {
+          const json = JSON.parse(payload) as {
+            type?: string;
+            delta?: string;
+            command?: string;
+            output?: string;
+            exitCode?: number;
+            sandboxId?: string;
+            error?: string;
+          };
+          if (json.type === "text" && json.delta) handlers.onText(json.delta);
+          else if (json.type === "tool_call") handlers.onToolCall(json.command ?? "");
+          else if (json.type === "tool_result")
+            handlers.onToolResult(json.output ?? "", json.exitCode ?? 0);
+          else if (json.type === "done") {
+            done = true;
+            handlers.onDone(json.sandboxId);
+          } else if (json.type === "error") {
+            done = true;
+            handlers.onError(json.error ?? "Agent failed.");
+          }
+        } catch {
+          /* ignore malformed chunks */
+        }
+      });
+      if (done) break;
+    }
+  } catch (error) {
+    if (!done) {
+      handlers.onError(
+        handlers.signal?.aborted ? "Dibatalkan." : error instanceof Error ? error.message : "Stream interrupted.",
+      );
+    }
+  }
+  if (!done) handlers.onDone(request.sandboxId);
+}
+
 export async function fetchModels(type: "chat" | "image" = "chat") {
   const response = await fetch(`/api/models?type=${type}`, { method: "GET" });
   const body = (await response.json()) as {

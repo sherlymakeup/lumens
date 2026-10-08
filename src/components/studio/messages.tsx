@@ -3,6 +3,7 @@ import {
   GitFork,
   RefreshCw,
   Share2,
+  Terminal,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -116,6 +117,34 @@ export function MessageList({
             {streaming && message.content ? <span className="stream-caret" /> : null}
             {message.error ? (
               <p className="mt-2 text-sm text-destructive">{message.error}</p>
+            ) : null}
+            {message.toolCalls && message.toolCalls.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {message.toolCalls.map((tc, tcIndex) => (
+                  <details
+                    key={tcIndex}
+                    className="group rounded-xl border border-border bg-card/60 text-[13px]"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2">
+                      <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate font-mono text-xs text-muted-foreground">
+                        {tc.command}
+                      </span>
+                      <span
+                        className={cn(
+                          "ml-auto shrink-0 font-mono text-[11px]",
+                          tc.exitCode === 0 ? "text-emerald-500" : "text-destructive",
+                        )}
+                      >
+                        exit {tc.exitCode}
+                      </span>
+                    </summary>
+                    <pre className="max-h-64 overflow-auto border-t border-border px-3 py-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
+                      {tc.output || t["msg.noOutput"]}
+                    </pre>
+                  </details>
+                ))}
+              </div>
             ) : null}
             {!streaming && message.content && !message.error ? (
               <div className="mt-2 flex items-center gap-0.5 transition-opacity md:opacity-40 md:hover:opacity-100 md:focus-within:opacity-100">

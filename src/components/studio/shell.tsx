@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { generateStream } from "@/lib/generate";
+import { generateAgent, generateStream } from "@/lib/generate";
 import { extrasInstruction, MODE_BY_ID, defaultExtras } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
 import { applyDensity, applyFontSize, applyTheme } from "@/lib/theme";
@@ -27,6 +27,7 @@ export function Studio() {
   const addMessage = useStudio((s) => s.addMessage);
   const patchMessage = useStudio((s) => s.patchMessage);
   const setStreamingId = useStudio((s) => s.setStreamingId);
+  const setSandboxId = useStudio((s) => s.setSandboxId);
   const setExtras = useStudio((s) => s.setExtras);
 
   const [draft, setDraft] = useState("");
@@ -95,6 +96,84 @@ export function Studio() {
     setThinking(false);
   }
 
+  async function runAgent(
+    conversationId: string,
+    assistantId: string,
+    userText: string,
+    system: string,
+    prior: ChatMessage[],
+  ) {
+    const state = useStudio.getState();
+    const conv = state.conversations.find((item) => item.id === conversationId);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const startedAt = Date.now();
+    let assembled = "";
+
+    const payloadMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      ...(system ? [{ role: "system" as const, content: system }] : []),
+      ...prior.map((message) => ({ role: message.role, content: message.content })),
+      { role: "user" as const, content: userText },
+    ];
+
+    await generateAgent(
+      {
+        messages: payloadMessages,
+        model: state.settings.model,
+        sandboxId: conv?.sandboxId,
+        params: {
+          temperature: state.settings.temperature,
+          maxTokens: state.settings.maxTokens,
+          topP: state.settings.topP,
+          frequencyPenalty: state.settings.frequencyPenalty,
+          presencePenalty: state.settings.presencePenalty,
+        },
+      },
+      {
+        signal: controller.signal,
+        onText: (delta) => {
+          assembled += delta;
+          patchMessage(conversationId, assistantId, { content: assembled });
+        },
+        onToolCall: (command) => {
+          const current = useStudio
+            .getState()
+            .conversations.find((item) => item.id === conversationId)
+            ?.messages.find((message) => message.id === assistantId);
+          patchMessage(conversationId, assistantId, {
+            toolCalls: [...(current?.toolCalls ?? []), { command, output: "", exitCode: 0 }],
+          });
+        },
+        onToolResult: (output, exitCode) => {
+          const current = useStudio
+            .getState()
+            .conversations.find((item) => item.id === conversationId)
+            ?.messages.find((message) => message.id === assistantId);
+          const calls = [...(current?.toolCalls ?? [])];
+          if (calls.length > 0) {
+            calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode };
+          }
+          patchMessage(conversationId, assistantId, { toolCalls: calls });
+        },
+        onDone: (sandboxId) => {
+          if (sandboxId) setSandboxId(conversationId, sandboxId);
+          patchMessage(conversationId, assistantId, { elapsedMs: Date.now() - startedAt });
+          setStreamingId(null);
+          abortRef.current = null;
+        },
+        onError: (message) => {
+          patchMessage(conversationId, assistantId, {
+            error: message,
+            content: assembled,
+            elapsedMs: Date.now() - startedAt,
+          });
+          setStreamingId(null);
+          abortRef.current = null;
+        },
+      },
+    );
+  }
+
   async function run(userText: string, prior?: ChatMessage[]) {
     const text = userText.trim();
     if (!text || useStudio.getState().streamingId) return;
@@ -134,6 +213,12 @@ export function Studio() {
     const extra = extrasInstruction(conv.modeId, conv.extras);
     const override = settings.systemPromptOverride.trim();
     const system = [mode.system, extra, override].filter(Boolean).join("\n\n");
+
+    if (settings.agentMode) {
+      await runAgent(id, assistant.id, text, system, history);
+      return;
+    }
+
     const payloadMessages = [
       { role: "system" as const, content: system },
       ...history.map((message) => ({ role: message.role, content: message.content })),

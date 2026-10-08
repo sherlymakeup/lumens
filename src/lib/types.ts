@@ -39,6 +39,7 @@ export type StudioSettings = {
   lang: Lang;
   sendWithEnter: boolean;
   showMarkdown: boolean;
+  agentMode: boolean;
   systemPromptOverride: string;
 };
 
@@ -50,6 +51,13 @@ export type ChatMessage = {
   error?: string;
   feedback?: "up" | "down";
   elapsedMs?: number;
+  toolCalls?: ToolCall[];
+};
+
+export type ToolCall = {
+  command: string;
+  output: string;
+  exitCode: number;
 };
 
 export type Conversation = {
@@ -61,6 +69,7 @@ export type Conversation = {
   createdAt: number;
   updatedAt: number;
   projectId?: string | null;
+  sandboxId?: string;
 };
 
 export type EngineId = "content" | "design" | "prototype" | "code";
@@ -128,5 +137,6 @@ export const DEFAULT_SETTINGS: StudioSettings = {
   lang: "id",
   sendWithEnter: true,
   showMarkdown: true,
+  agentMode: false,
   systemPromptOverride: "",
 };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Bot, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -37,6 +37,8 @@ export function Composer({
 }) {
   const mode = MODE_BY_ID[modeId];
   const model = useStudio((s) => s.settings.model);
+  const agentMode = useStudio((s) => s.settings.agentMode);
+  const setSettings = useStudio((s) => s.setSettings);
   const t = useStrings();
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focus, setFocus] = useState(false);
@@ -123,6 +125,21 @@ export function Composer({
               {model || t["header.noModels"]}
             </span>
           </span>
+          <button
+            type="button"
+            onClick={() => setSettings({ agentMode: !agentMode })}
+            data-on={agentMode}
+            title={t["eng.agentHint"]}
+            className={cn(
+              "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
+              agentMode
+                ? "border-primary/60 bg-primary/15 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Bot className="size-3.5" />
+            {t["eng.agent"]}
+          </button>
           <div className="flex-1" />
           {streaming ? (
             <Button variant="outline" onClick={onStop} className="h-9 gap-1.5 px-3.5">

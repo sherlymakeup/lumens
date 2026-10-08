@@ -1,0 +1,132 @@
+// XDIRGA TOOLS — TDD: agent client (generateAgent) SSE event routing.
+// Run: node --test tests/xdirga-agent.test.mjs
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { generateAgent } from "../src/lib/generate.ts";
+
+function mockFetch(handler) {
+  const real = globalThis.fetch;
+  globalThis.fetch = handler;
+  return () => {
+    globalThis.fetch = real;
+  };
+}
+
+function sseStream(events) {
+  const encoder = new TextEncoder();
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const event of events) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        }
+        controller.close();
+      },
+    }),
+    { headers: { "Content-Type": "text/event-stream" } },
+  );
+}
+
+const BASE_REQ = {
+  messages: [{ role: "user", content: "hitung 2**10" }],
+  model: "xdirgalabs",
+  sandboxId: "sbx-123",
+  params: { temperature: 0.7, maxTokens: 1000, topP: 1, frequencyPenalty: 0, presencePenalty: 0 },
+};
+
+function collector() {
+  const seen = { texts: [], calls: [], results: [], sandboxId: undefined, error: null, done: 0 };
+  return {
+    seen,
+    handlers: {
+      onText: (delta) => seen.texts.push(delta),
+      onToolCall: (command) => seen.calls.push(command),
+      onToolResult: (output, exitCode) => seen.results.push([output, exitCode]),
+      onDone: (sandboxId) => {
+        seen.done += 1;
+        seen.sandboxId = sandboxId;
+      },
+      onError: (message) => {
+        seen.error = message;
+      },
+    },
+  };
+}
+
+// ---------- generateAgent ----------
+test("generateAgent POSTs to /api/agent and routes tool/text/done events", async () => {
+  const restore = mockFetch(async (url, init) => {
+    assert.equal(url, "/api/agent");
+    assert.equal(init?.method, "POST");
+    const body = JSON.parse(init.body);
+    assert.equal(body.connection.model, "xdirgalabs");
+    assert.equal(body.sandboxId, "sbx-123");
+    assert.equal(body.messages[0].content, "hitung 2**10");
+    return sseStream([
+      { type: "tool_call", command: "python3 -c 'print(2**10)'" },
+      { type: "tool_result", output: "1024", exitCode: 0 },
+      { type: "text", delta: "Hel" },
+      { type: "text", delta: "lo" },
+      { type: "done", sandboxId: "sbx-123" },
+    ]);
+  });
+  const { seen, handlers } = collector();
+  try {
+    await generateAgent(BASE_REQ, handlers);
+    assert.deepEqual(seen.calls, ["python3 -c 'print(2**10)'"]);
+    assert.deepEqual(seen.results, [["1024", 0]]);
+    assert.deepEqual(seen.texts, ["Hel", "lo"]);
+    assert.equal(seen.sandboxId, "sbx-123");
+    assert.equal(seen.done, 1);
+    assert.equal(seen.error, null);
+  } finally {
+    restore();
+  }
+});
+
+test("generateAgent surfaces error events via onError", async () => {
+  const restore = mockFetch(async () =>
+    sseStream([{ type: "error", error: "Model error 400: tools not supported" }]),
+  );
+  const { seen, handlers } = collector();
+  try {
+    await generateAgent({ ...BASE_REQ, sandboxId: undefined }, handlers);
+    assert.equal(seen.error, "Model error 400: tools not supported");
+    assert.equal(seen.done, 0);
+  } finally {
+    restore();
+  }
+});
+
+test("generateAgent throws the server error message on non-OK", async () => {
+  const restore = mockFetch(
+    async () =>
+      new Response(JSON.stringify({ error: "Sandbox belum dikonfigurasi" }), { status: 503 }),
+  );
+  const { seen, handlers } = collector();
+  try {
+    await generateAgent(BASE_REQ, handlers);
+    assert.equal(seen.error, "Sandbox belum dikonfigurasi");
+  } finally {
+    restore();
+  }
+});
+
+test("generateAgent sends no sandboxId when starting fresh", async () => {
+  const restore = mockFetch(async (url, init) => {
+    const body = JSON.parse(init.body);
+    assert.ok(!("sandboxId" in body) || body.sandboxId === undefined);
+    return sseStream([
+      { type: "text", delta: "ok" },
+      { type: "done", sandboxId: "sbx-new" },
+    ]);
+  });
+  const { seen, handlers } = collector();
+  try {
+    await generateAgent({ ...BASE_REQ, sandboxId: undefined }, handlers);
+    assert.equal(seen.sandboxId, "sbx-new");
+    assert.deepEqual(seen.texts, ["ok"]);
+  } finally {
+    restore();
+  }
+});
