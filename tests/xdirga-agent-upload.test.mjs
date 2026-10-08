@@ -88,6 +88,21 @@ test("readImageBase64 refuses oversize images for vision", async () => {
   assert.equal(r.ok, false);
 });
 
+test("buildWriteCommand actually writes the file in a real shell", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { mkdtemp, readFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const run = promisify(execFile);
+  const dir = await mkdtemp(join(tmpdir(), "upl-"));
+  const cmd = buildWriteCommand("tes.png", Buffer.from("hello").toString("base64"));
+  await run("bash", ["-c", cmd], { cwd: dir });
+  const content = await readFile(join(dir, UPLOAD_DIR, "tes.png"), "utf8");
+  assert.equal(content, "hello");
+  await rm(dir, { recursive: true, force: true });
+});
+
 test("upload size cap is sane", () => {
   assert.equal(MAX_UPLOAD_BYTES, 10 * 1024 * 1024);
 });

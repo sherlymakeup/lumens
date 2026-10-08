@@ -50,7 +50,9 @@ export function uploadPath(name: string): string {
 export function buildWriteCommand(relPath: string, base64: string): string {
   const safe = sanitizeUploadName(relPath.split("/").pop() ?? relPath);
   const dir = UPLOAD_DIR.replace(/[^a-zA-Z0-9_-]/g, "");
-  return `mkdir -p -- ${shellQuote(dir)} && printf '%s' ${shellQuote(base64)} | base64 -d > -- ${shellQuote(`${dir}/${safe}`)}`;
+  // Catatan: `--` tidak valid untuk target redirect `>` (dianggap nama file),
+  // tapi path sudah disanitasi (tak bisa diawali `-`), jadi quote saja cukup.
+  return `mkdir -p -- ${shellQuote(dir)} && printf '%s' ${shellQuote(base64)} | base64 -d > ${shellQuote(`${dir}/${safe}`)}`;
 }
 
 function shellQuote(s: string): string {
