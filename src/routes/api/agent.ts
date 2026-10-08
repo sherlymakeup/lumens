@@ -5,6 +5,7 @@ import { chatCompletionsUrl } from "@/lib/safe-url";
 import { runImageGeneration, runWebRead, runWebSearch } from "@/lib/agent-tools";
 import { deleteMemory, memoryEnv, saveMemory, searchMemories } from "@/lib/agent-memory";
 import { fetchSandboxFile } from "@/lib/agent-files";
+import { normalizePlanSteps } from "@/lib/agent-plan";
 import { clamp } from "@/lib/utils";
 
 const Message = z.object({
@@ -31,7 +32,7 @@ const Body = z.object({
 // Idle timeout per sandbox session: 5 minutes, refreshed on every use.
 const SESSION_IDLE_MS = 300_000;
 const MAX_OUTPUT = 8_000;
-const MAX_ITERATIONS = 6;
+const MAX_ITERATIONS = 10;
 
 const AGENT_SYSTEM = `You are an AI agent with direct access to a Linux sandbox (Debian 12, 2 CPU, ~512MB RAM).
 You have three tools:
@@ -71,6 +72,12 @@ Files for the user:
   its path. The file is delivered to the user as a download card — don't
   paste the whole file content into chat.
 - Prefer read_file over dumping long file contents as text.
+
+Planning (for tasks with more than 2 steps):
+- Call set_plan FIRST with your step list before doing anything else.
+- Call set_plan again to update statuses as steps complete (in_progress → done).
+- Verify the final result before declaring done. If a step fails, revise the
+  plan instead of silently skipping it.
 `;
 
 const TOOLS = [
@@ -176,6 +183,35 @@ const TOOLS = [
           id: { type: "string", description: "The memory id to delete" },
         },
         required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_plan",
+      description:
+        "Write or update your own step-by-step plan. Call first for multi-step tasks, then again to update step statuses as work progresses.",
+      parameters: {
+        type: "object",
+        properties: {
+          steps: {
+            type: "array",
+            description: "Ordered steps, each with text and status",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string", description: "Short step description" },
+                status: {
+                  type: "string",
+                  enum: ["pending", "in_progress", "done"],
+                },
+              },
+              required: ["text"],
+            },
+          },
+        },
+        required: ["steps"],
       },
     },
   },
@@ -521,6 +557,12 @@ export const Route = createFileRoute("/api/agent")({
                     const outcome = await deleteMemory(id, memoryEnv());
                     const output = clip(outcome.text);
                     send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
+                    convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                  } else if (tc.name === "set_plan") {
+                    const steps = normalizePlanSteps(args.steps);
+                    send({ type: "plan", steps });
+                    const output = `Plan updated (${steps.length} steps).`;
+                    send({ type: "tool_result", output, exitCode: 0 });
                     convo.push({ role: "tool", tool_call_id: tc.id, content: output });
                   } else if (tc.name === "read_file") {
                     const path = String(args.path ?? "").slice(0, 500);

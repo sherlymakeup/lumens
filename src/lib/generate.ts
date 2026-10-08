@@ -1,4 +1,5 @@
 import type { AgentFile, GenerateRequest } from "./types";
+import type { PlanStep } from "./agent-plan";
 
 export type StreamHandlers = {
   onDelta: (text: string) => void;
@@ -108,6 +109,7 @@ export type AgentHandlers = {
   onText: (delta: string) => void;
   onToolCall: (command: string, kind?: string) => void;
   onToolResult: (output: string, exitCode: number, images?: string[], files?: AgentFile[]) => void;
+  onPlan?: (steps: PlanStep[]) => void;
   onDone: (sandboxId?: string) => void;
   onError: (message: string) => void;
   signal?: AbortSignal;
@@ -188,6 +190,7 @@ export async function generateAgent(
             exitCode?: number;
             images?: string[];
             files?: AgentFile[];
+            steps?: PlanStep[];
             sandboxId?: string;
             error?: string;
           };
@@ -195,6 +198,8 @@ export async function generateAgent(
           else if (json.type === "tool_call") handlers.onToolCall(json.command ?? "", json.kind);
           else if (json.type === "tool_result")
             handlers.onToolResult(json.output ?? "", json.exitCode ?? 0, json.images, json.files);
+          else if (json.type === "plan" && Array.isArray(json.steps))
+            handlers.onPlan?.(json.steps as PlanStep[]);
           else if (json.type === "done") {
             done = true;
             handlers.onDone(json.sandboxId);

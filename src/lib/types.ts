@@ -52,6 +52,7 @@ export type ChatMessage = {
   feedback?: "up" | "down";
   elapsedMs?: number;
   toolCalls?: ToolCall[];
+  plan?: import("./agent-plan").PlanStep[];
 };
 
 export type AgentFile = {

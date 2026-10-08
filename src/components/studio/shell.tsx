@@ -166,6 +166,9 @@ export function Studio() {
           }
           patchMessage(conversationId, assistantId, { toolCalls: calls });
         },
+        onPlan: (steps) => {
+          patchMessage(conversationId, assistantId, { plan: steps });
+        },
         onDone: (sandboxId) => {
           if (sandboxId) setSandboxId(conversationId, sandboxId);
           patchMessage(conversationId, assistantId, { elapsedMs: Date.now() - startedAt });

@@ -165,6 +165,29 @@ test("generateAgent routes memory tool kinds", async () => {
   }
 });
 
+test("generateAgent routes plan events to onPlan", async () => {
+  const steps = [
+    { text: "Cari data", status: "done" },
+    { text: "Tulis laporan", status: "in_progress" },
+  ];
+  const restore = mockFetch(async () =>
+    sseStream([
+      { type: "plan", steps },
+      { type: "done", sandboxId: "sbx-1" },
+    ]),
+  );
+  const seen = { plans: [] };
+  try {
+    await generateAgent(BASE_REQ, {
+      ...collector().handlers,
+      onPlan: (s) => seen.plans.push(s),
+    });
+    assert.deepEqual(seen.plans, [steps]);
+  } finally {
+    restore();
+  }
+});
+
 test("generateAgent routes web_read as search kind", async () => {
   const restore = mockFetch(async () =>
     sseStream([

@@ -1,9 +1,11 @@
 import {
   Brain,
+  Check,
   Copy,
   FileDown,
   GitFork,
   Image as ImageIcon,
+  Loader2,
   RefreshCw,
   Search,
   Share2,
@@ -121,6 +123,36 @@ export function MessageList({
             {streaming && message.content ? <span className="stream-caret" /> : null}
             {message.error ? (
               <p className="mt-2 text-sm text-destructive">{message.error}</p>
+            ) : null}
+            {message.plan && message.plan.length > 0 ? (
+              <div className="mt-3 rounded-xl border border-border bg-card/60 px-3 py-2">
+                <div className="mb-1 flex items-center gap-2">
+                  <GitFork className="size-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t["msg.plan"] ?? "Rencana"}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {message.plan.map((step, stepIndex) => (
+                    <div key={stepIndex} className="flex items-center gap-2 py-0.5 text-[13px]">
+                      {step.status === "done" ? (
+                        <Check className="size-3.5 shrink-0 text-emerald-500" />
+                      ) : step.status === "in_progress" ? (
+                        <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
+                      ) : (
+                        <span className="size-3.5 shrink-0 rounded-full border border-muted-foreground/40" />
+                      )}
+                      <span
+                        className={cn(
+                          step.status === "done" && "text-muted-foreground line-through",
+                        )}
+                      >
+                        {step.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : null}
             {message.toolCalls && message.toolCalls.length > 0 ? (
               <div className="mt-3 space-y-2">
