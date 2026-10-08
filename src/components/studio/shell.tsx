@@ -145,7 +145,7 @@ export function Studio() {
               ...(current?.toolCalls ?? []),
               {
                 kind:
-                  kind === "search" || kind === "image" || kind === "memory"
+                  kind === "search" || kind === "image" || kind === "memory" || kind === "file"
                     ? kind
                     : "sandbox",
                 command,
@@ -155,14 +155,14 @@ export function Studio() {
             ],
           });
         },
-        onToolResult: (output, exitCode, images) => {
+        onToolResult: (output, exitCode, images, files) => {
           const current = useStudio
             .getState()
             .conversations.find((item) => item.id === conversationId)
             ?.messages.find((message) => message.id === assistantId);
           const calls = [...(current?.toolCalls ?? [])];
           if (calls.length > 0) {
-            calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode, images };
+            calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode, images, files };
           }
           patchMessage(conversationId, assistantId, { toolCalls: calls });
         },

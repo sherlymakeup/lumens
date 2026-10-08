@@ -1,4 +1,4 @@
-import type { GenerateRequest } from "./types";
+import type { AgentFile, GenerateRequest } from "./types";
 
 export type StreamHandlers = {
   onDelta: (text: string) => void;
@@ -107,7 +107,7 @@ export async function generateStream(request: GenerateRequest, handlers: StreamH
 export type AgentHandlers = {
   onText: (delta: string) => void;
   onToolCall: (command: string, kind?: string) => void;
-  onToolResult: (output: string, exitCode: number, images?: string[]) => void;
+  onToolResult: (output: string, exitCode: number, images?: string[], files?: AgentFile[]) => void;
   onDone: (sandboxId?: string) => void;
   onError: (message: string) => void;
   signal?: AbortSignal;
@@ -187,13 +187,14 @@ export async function generateAgent(
             output?: string;
             exitCode?: number;
             images?: string[];
+            files?: AgentFile[];
             sandboxId?: string;
             error?: string;
           };
           if (json.type === "text" && json.delta) handlers.onText(json.delta);
           else if (json.type === "tool_call") handlers.onToolCall(json.command ?? "", json.kind);
           else if (json.type === "tool_result")
-            handlers.onToolResult(json.output ?? "", json.exitCode ?? 0, json.images);
+            handlers.onToolResult(json.output ?? "", json.exitCode ?? 0, json.images, json.files);
           else if (json.type === "done") {
             done = true;
             handlers.onDone(json.sandboxId);

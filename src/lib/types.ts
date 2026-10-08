@@ -54,12 +54,20 @@ export type ChatMessage = {
   toolCalls?: ToolCall[];
 };
 
+export type AgentFile = {
+  name: string;
+  mime: string;
+  base64: string;
+  size: number;
+};
+
 export type ToolCall = {
-  kind?: "sandbox" | "search" | "image" | "memory";
+  kind?: "sandbox" | "search" | "image" | "memory" | "file";
   command: string;
   output: string;
   exitCode: number;
   images?: string[];
+  files?: AgentFile[];
 };
 
 export type Conversation = {

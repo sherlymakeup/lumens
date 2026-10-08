@@ -165,6 +165,29 @@ test("generateAgent routes memory tool kinds", async () => {
   }
 });
 
+test("generateAgent routes file tool kinds and passes files through", async () => {
+  const file = { name: "laporan.md", mime: "text/markdown", base64: "IyBIYWxv", size: 6 };
+  const restore = mockFetch(async () =>
+    sseStream([
+      { type: "tool_call", kind: "file", command: "laporan.md" },
+      { type: "tool_result", output: "File siap diunduh.", exitCode: 0, files: [file] },
+      { type: "done", sandboxId: "sbx-1" },
+    ]),
+  );
+  const seen = { calls: [], results: [] };
+  try {
+    await generateAgent(BASE_REQ, {
+      ...collector().handlers,
+      onToolCall: (command, kind) => seen.calls.push([command, kind]),
+      onToolResult: (output, exitCode, images, files) => seen.results.push(files),
+    });
+    assert.deepEqual(seen.calls, [["laporan.md", "file"]]);
+    assert.deepEqual(seen.results, [[file]]);
+  } finally {
+    restore();
+  }
+});
+
 test("generateAgent sends no sandboxId when starting fresh", async () => {
   const restore = mockFetch(async (url, init) => {
     const body = JSON.parse(init.body);

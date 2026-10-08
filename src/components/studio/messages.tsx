@@ -1,6 +1,7 @@
 import {
   Brain,
   Copy,
+  FileDown,
   GitFork,
   Image as ImageIcon,
   RefreshCw,
@@ -131,7 +132,9 @@ export function MessageList({
                         ? ImageIcon
                         : tc.kind === "memory"
                           ? Brain
-                          : Terminal;
+                          : tc.kind === "file"
+                            ? FileDown
+                            : Terminal;
                   return (
                     <details
                       key={tcIndex}
@@ -161,6 +164,33 @@ export function MessageList({
                               className="w-full rounded-lg border border-border object-contain"
                               loading="lazy"
                             />
+                          ))}
+                        </div>
+                      ) : null}
+                      {tc.files && tc.files.length > 0 ? (
+                        <div className="space-y-2 border-t border-border p-2">
+                          {tc.files.map((file, fileIndex) => (
+                            <a
+                              key={fileIndex}
+                              href={`data:${file.mime};base64,${file.base64}`}
+                              download={file.name}
+                              className="flex items-center gap-3 rounded-lg border border-border bg-background/60 px-3 py-2.5 transition-colors hover:border-primary/50"
+                            >
+                              <FileDown className="size-5 shrink-0 text-primary" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-medium">
+                                  {file.name}
+                                </span>
+                                <span className="block font-mono text-[11px] text-muted-foreground">
+                                  {file.size >= 1048576
+                                    ? `${(file.size / 1048576).toFixed(1)} MB`
+                                    : `${(file.size / 1024).toFixed(1)} KB`}
+                                </span>
+                              </span>
+                              <span className="shrink-0 text-xs text-primary">
+                                {t["msg.download"] ?? "Unduh"}
+                              </span>
+                            </a>
                           ))}
                         </div>
                       ) : null}

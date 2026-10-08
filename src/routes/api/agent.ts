@@ -4,6 +4,7 @@ import { Novita, type Sandbox } from "novita-sandbox";
 import { chatCompletionsUrl } from "@/lib/safe-url";
 import { runImageGeneration, runWebSearch } from "@/lib/agent-tools";
 import { deleteMemory, memoryEnv, saveMemory, searchMemories } from "@/lib/agent-memory";
+import { fetchSandboxFile } from "@/lib/agent-files";
 import { clamp } from "@/lib/utils";
 
 const Message = z.object({
@@ -59,7 +60,15 @@ Memory (long-term, across conversations):
   chit-chat, one-time requests, or secrets.
 - Before saving, consider a quick memory_search to avoid duplicates.
 - If the user corrects a remembered fact, memory_delete the old one and save
-  the new one.`;
+  the new one.
+
+Files for the user:
+- When the user asks for a document, report, script, or any downloadable
+  file: create it in the sandbox with sandbox_exec, then call read_file with
+  its path. The file is delivered to the user as a download card — don't
+  paste the whole file content into chat.
+- Prefer read_file over dumping long file contents as text.
+`;
 
 const TOOLS = [
   {
@@ -146,6 +155,24 @@ const TOOLS = [
           id: { type: "string", description: "The memory id to delete" },
         },
         required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_file",
+      description:
+        "Fetch a file from the sandbox and deliver it to the user as a download. Create the file first with sandbox_exec, then call this with its relative path.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Relative path of the file in the sandbox, e.g. \"laporan.md\"",
+          },
+        },
+        required: ["path"],
       },
     },
   },
@@ -464,6 +491,33 @@ export const Route = createFileRoute("/api/agent")({
                     const output = clip(outcome.text);
                     send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
                     convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                  } else if (tc.name === "read_file") {
+                    const path = String(args.path ?? "").slice(0, 500);
+                    send({ type: "tool_call", kind: "file", command: path });
+                    const sb = await ensureSandbox();
+                    const execFn = async (cmd: string) => {
+                      const r = await sb.commands.run(cmd, { timeoutMs: 30_000 });
+                      return {
+                        stdout: r.stdout ?? "",
+                        stderr: r.stderr ?? "",
+                        exitCode: r.exitCode ?? 0,
+                      };
+                    };
+                    const outcome = await fetchSandboxFile(execFn, path);
+                    const output = clip(outcome.text);
+                    send({
+                      type: "tool_result",
+                      output,
+                      exitCode: outcome.ok ? 0 : 1,
+                      files: outcome.file ? [outcome.file] : undefined,
+                    });
+                    convo.push({
+                      role: "tool",
+                      tool_call_id: tc.id,
+                      content: outcome.ok
+                        ? `${output} (file sudah dikirim ke user sebagai download)`
+                        : output,
+                    });
                   } else {
                     convo.push({
                       role: "tool",

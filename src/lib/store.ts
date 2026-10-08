@@ -247,13 +247,13 @@ export const useStudio = create<StudioState>()(
       name: "chat-studio-v1",
       partialize: (state) => ({
         settings: state.settings,
-        // Tool-call images are base64 data URLs (MBs) — drop them on persist
+        // Tool-call images/files are base64 (MBs) — drop them on persist
         // to avoid blowing the localStorage quota; text summaries stay.
         conversations: state.conversations.map((conv) => ({
           ...conv,
           messages: conv.messages.map((message) => ({
             ...message,
-            toolCalls: message.toolCalls?.map(({ images: _dropped, ...rest }) => rest),
+            toolCalls: message.toolCalls?.map(({ images: _dropped, files: _droppedFiles, ...rest }) => rest),
           })),
         })),
         activeId: state.activeId,
