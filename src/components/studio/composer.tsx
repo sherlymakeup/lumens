@@ -43,9 +43,13 @@ export function Composer({
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focus, setFocus] = useState(false);
 
+  // Native auto-size where supported (Chrome 123+, Safari 18.4+): the
+  // textarea hugs its content — exactly 1 line when empty. JS fallback
+  // keeps old browsers growing instead of staying a fixed single line.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (typeof CSS !== "undefined" && CSS.supports("field-sizing", "content")) return;
     el.style.height = "0px";
     el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
   }, [value]);
@@ -115,7 +119,7 @@ export function Composer({
           placeholder={mode.placeholder}
           disabled={disabled}
           rows={1}
-          className="max-h-55 min-h-10 w-full resize-none bg-transparent px-4 pt-2.5 pb-1 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
+          className="max-h-55 w-full resize-none overflow-y-auto bg-transparent px-4 py-2 text-[15px] leading-relaxed text-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground disabled:opacity-50"
         />
 
         <div className="flex flex-wrap items-center gap-2 px-2 pt-1.5 pb-2">
