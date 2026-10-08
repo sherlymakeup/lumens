@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { Novita, type Sandbox } from "novita-sandbox";
+import { Novita } from "novita-sandbox";
 import { chatCompletionsUrl } from "@/lib/safe-url";
 import { runImageGeneration, runWebRead, runWebSearch } from "@/lib/agent-tools";
 import { deleteMemory, memoryEnv, saveMemory, searchMemories } from "@/lib/agent-memory";
 import { fetchSandboxFile } from "@/lib/agent-files";
+import {
+  DEFAULT_COMMAND_TIMEOUT_MS,
+  MAX_COMMAND_TIMEOUT_MS,
+  SandboxSession,
+  type SandboxLike,
+} from "@/lib/agent-sandbox";
 import { normalizePlanSteps } from "@/lib/agent-plan";
 import { clamp } from "@/lib/utils";
 
@@ -29,8 +35,8 @@ const Body = z.object({
   }),
 });
 
-// Idle timeout per sandbox session: 5 minutes, refreshed on every use.
-const SESSION_IDLE_MS = 300_000;
+// Idle timeout per sandbox session: 5 minutes, refreshed on every use
+// (see SANDBOX_IDLE_MS in @/lib/agent-sandbox).
 const MAX_OUTPUT = 8_000;
 const MAX_ITERATIONS = 10;
 
@@ -42,6 +48,8 @@ You have three tools:
 
 Rules:
 - When the user asks you to compute, inspect, create, run, or verify something with the computer, USE sandbox_exec — don't just describe what to do.
+- Long commands need a generous timeoutMs: installs/downloads/builds can take minutes — set 180000-300000 for those. If a command times out, retry with a bigger timeoutMs or split the work into smaller steps.
+- The sandbox auto-refreshes before Novita's 1-hour limit; if you see a note that it was replaced, files from the old session are gone — recreate what you need and continue the plan.
 - When the user asks you to draw/create/make an image or picture, USE generate_image with a detailed English prompt.
 - When the user asks about news, prices, schedules, or recent events, USE web_search first.
 - web_search returns short snippets with URLs. When a snippet isn't enough,
@@ -96,7 +104,8 @@ const TOOLS = [
           },
           timeoutMs: {
             type: "number",
-            description: "Max time to wait for the command (default 30000, max 120000)",
+            description:
+              "Max time to wait for the command in ms (default 60000, max 600000). Set generously for installs, downloads, and builds (e.g. 300000).",
           },
         },
         required: ["command"],
@@ -310,35 +319,23 @@ export const Route = createFileRoute("/api/agent")({
           async start(controller) {
             const send = (data: unknown) =>
               controller.enqueue(encoder.encode(sse(data)));
-            let sandbox: Sandbox | null = null;
-
-            async function ensureSandbox(): Promise<Sandbox> {
-              if (sandbox) return sandbox;
-              const novita = new Novita({ apiKey: novitaKey });
-              if (sandboxId) {
-                try {
-                  sandbox = await novita.sandbox.connect(sandboxId);
-                } catch {
-                  sandbox = null;
-                  sandboxId = undefined;
-                }
-              }
-              if (!sandbox) {
-                // Template ID is configurable via NOVITA_TEMPLATE_ID so the
-                // account owner can point at a bigger template (e.g. 2GB RAM).
-                // The SDK binds CPU/RAM to the template — there is no
-                // per-create memory option. Default "base" = 2 CPU / 512MB.
-                const templateId = process.env.NOVITA_TEMPLATE_ID?.trim() || "base";
-                sandbox = await novita.sandbox.create({
-                  template: templateId,
-                  timeoutMs: SESSION_IDLE_MS,
-                });
-                sandboxId = sandbox.sandboxId;
-              }
-              // Refresh the idle timeout on every use.
-              await sandbox.setTimeout(SESSION_IDLE_MS).catch(() => {});
-              return sandbox;
-            }
+            // Resilient sandbox session: auto-recreates before Novita's 1h
+            // limit and retries once if the sandbox dies mid-command, so a
+            // sandbox timeout never kills the agent stream.
+            const novita = new Novita({ apiKey: novitaKey });
+            const templateId = process.env.NOVITA_TEMPLATE_ID?.trim() || "base";
+            const session = new SandboxSession(
+              {
+                sandbox: {
+                  connect: (id) => novita.sandbox.connect(id) as Promise<SandboxLike>,
+                  create: (opts) =>
+                    novita.sandbox.create(opts) as Promise<SandboxLike>,
+                },
+              },
+              templateId,
+              Date.now,
+              sandboxId,
+            );
 
             async function callModel(
               convo: ChatMsg[],
@@ -449,9 +446,13 @@ export const Route = createFileRoute("/api/agent")({
 
                   if (tc.name === "sandbox_exec") {
                     let command = String(args.command ?? "").slice(0, 2000);
-                    let timeoutMs = 30_000;
+                    let timeoutMs = DEFAULT_COMMAND_TIMEOUT_MS;
                     if (args.timeoutMs) {
-                      timeoutMs = clamp(Math.round(Number(args.timeoutMs)), 1000, 120_000);
+                      timeoutMs = clamp(
+                        Math.round(Number(args.timeoutMs)),
+                        1000,
+                        MAX_COMMAND_TIMEOUT_MS,
+                      );
                     }
                     if (!command.trim()) {
                       convo.push({
@@ -462,13 +463,13 @@ export const Route = createFileRoute("/api/agent")({
                       continue;
                     }
                     send({ type: "tool_call", kind: "sandbox", command });
-                    const sb = await ensureSandbox();
                     let output: string;
                     let exitCode = 0;
                     try {
-                      const result = await sb.commands.run(command, { timeoutMs });
+                      const result = await session.run(command, timeoutMs);
+                      const notePrefix = result.note ? `[${result.note}]\n` : "";
                       output = clip(
-                        `$ ${command}\n${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`,
+                        `${notePrefix}$ ${command}\n${result.stdout ?? ""}${result.stderr ? `\n[stderr]\n${result.stderr}` : ""}`,
                       );
                       exitCode = result.exitCode ?? 0;
                     } catch (error) {
@@ -567,9 +568,8 @@ export const Route = createFileRoute("/api/agent")({
                   } else if (tc.name === "read_file") {
                     const path = String(args.path ?? "").slice(0, 500);
                     send({ type: "tool_call", kind: "file", command: path });
-                    const sb = await ensureSandbox();
                     const execFn = async (cmd: string) => {
-                      const r = await sb.commands.run(cmd, { timeoutMs: 30_000 });
+                      const r = await session.run(cmd, DEFAULT_COMMAND_TIMEOUT_MS);
                       return {
                         stdout: r.stdout ?? "",
                         stderr: r.stderr ?? "",
@@ -617,7 +617,7 @@ export const Route = createFileRoute("/api/agent")({
                 if (request.signal.aborted) break;
                 send({ type: "text", delta: finalText.slice(p, p + CHUNK) });
               }
-              send({ type: "done", sandboxId });
+              send({ type: "done", sandboxId: session.sandboxId });
             } catch (error) {
               if (!request.signal.aborted) {
                 send({
