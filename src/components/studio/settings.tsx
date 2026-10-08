@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -129,8 +128,8 @@ export function SettingsPanel({
               </button>
             ))}
           </nav>
-          <ScrollArea className="min-w-0 flex-1">
-            <div className="flex gap-2 overflow-x-auto px-5 pt-4 sm:hidden">
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="flex touch-pan-x gap-2 overflow-x-auto px-5 pt-4 sm:hidden">
               {SECTIONS.map((item) => (
                 <button
                   key={item.id}
@@ -407,7 +406,7 @@ export function SettingsPanel({
                 </>
               ) : null}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
