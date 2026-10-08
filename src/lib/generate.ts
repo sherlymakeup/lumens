@@ -137,16 +137,25 @@ export async function generateImage(input: {
   const prompt = input.prompt.trim();
   if (!model) throw new Error("Pilih model gambar dulu.");
   if (!prompt) throw new Error("Prompt gambar tidak boleh kosong.");
-  const response = await fetch("/api/images", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      prompt,
-      size: input.size,
-      n: input.n ?? 1,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("/api/images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        prompt,
+        size: input.size,
+        n: input.n ?? 1,
+      }),
+      signal: AbortSignal.timeout(150_000),
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new Error("Waktu habis — gateway terlalu lama merespons. Coba lagi.");
+    }
+    throw new Error(error instanceof Error ? error.message : "Could not reach the server.");
+  }
   const body = (await response.json()) as { images?: GeneratedImage[]; error?: string };
   if (!response.ok) throw new Error(body.error ?? "Image generation failed");
   return body.images ?? [];
