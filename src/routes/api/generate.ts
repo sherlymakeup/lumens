@@ -113,9 +113,14 @@ export const Route = createFileRoute("/api/generate")({
           const body = (await upstream.json()) as {
             choices?: { message?: { content?: string } }[];
           };
-          return Response.json({
-            text: body.choices?.[0]?.message?.content ?? "",
-          });
+          const text = body.choices?.[0]?.message?.content ?? "";
+          if (!text) {
+            return Response.json(
+              { error: "Gateway returned an empty response." },
+              { status: 502 },
+            );
+          }
+          return Response.json({ text });
         }
 
         const encoder = new TextEncoder();
@@ -129,6 +134,7 @@ export const Route = createFileRoute("/api/generate")({
               return;
             }
             let buffer = "";
+            let forwardedChars = 0;
             try {
               while (true) {
                 const { done, value } = await reader.read();
@@ -156,6 +162,7 @@ export const Route = createFileRoute("/api/generate")({
                       controller.enqueue(encoder.encode(sse({ thinking: true })));
                     }
                     if (delta?.content) {
+                      forwardedChars += delta.content.length;
                       controller.enqueue(encoder.encode(sse({ text: delta.content })));
                     }
                   } catch {
@@ -163,7 +170,13 @@ export const Route = createFileRoute("/api/generate")({
                   }
                 }
               }
-              controller.enqueue(encoder.encode(sse({ done: true })));
+              if (forwardedChars === 0 && !request.signal.aborted) {
+                controller.enqueue(
+                  encoder.encode(sse({ error: "Gateway returned an empty response." })),
+                );
+              } else {
+                controller.enqueue(encoder.encode(sse({ done: true })));
+              }
               controller.close();
             } catch (error) {
               if (!request.signal.aborted) {
