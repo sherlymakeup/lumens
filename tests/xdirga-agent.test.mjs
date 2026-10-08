@@ -145,6 +145,26 @@ test("generateAgent routes tool kinds and image payloads", async () => {
   }
 });
 
+test("generateAgent routes memory tool kinds", async () => {
+  const restore = mockFetch(async () =>
+    sseStream([
+      { type: "tool_call", kind: "memory", command: "kopi" },
+      { type: "tool_result", output: "Ingatan yang relevan:\n- [id-1] user suka kopi", exitCode: 0 },
+      { type: "done", sandboxId: "sbx-1" },
+    ]),
+  );
+  const seen = { calls: [] };
+  try {
+    await generateAgent(BASE_REQ, {
+      ...collector().handlers,
+      onToolCall: (command, kind) => seen.calls.push([command, kind]),
+    });
+    assert.deepEqual(seen.calls, [["kopi", "memory"]]);
+  } finally {
+    restore();
+  }
+});
+
 test("generateAgent sends no sandboxId when starting fresh", async () => {
   const restore = mockFetch(async (url, init) => {
     const body = JSON.parse(init.body);

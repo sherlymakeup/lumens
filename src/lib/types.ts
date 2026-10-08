@@ -55,7 +55,7 @@ export type ChatMessage = {
 };
 
 export type ToolCall = {
-  kind?: "sandbox" | "search" | "image";
+  kind?: "sandbox" | "search" | "image" | "memory";
   command: string;
   output: string;
   exitCode: number;

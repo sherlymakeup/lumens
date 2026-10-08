@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Novita, type Sandbox } from "novita-sandbox";
 import { chatCompletionsUrl } from "@/lib/safe-url";
 import { runImageGeneration, runWebSearch } from "@/lib/agent-tools";
+import { deleteMemory, memoryEnv, saveMemory, searchMemories } from "@/lib/agent-memory";
 import { clamp } from "@/lib/utils";
 
 const Message = z.object({
@@ -45,7 +46,20 @@ Rules:
 - The sandbox persists for this conversation (files you create stay available), with a 5-minute idle timeout.
 - Never exfiltrate secrets: there are none in the sandbox; don't go looking for any.
 - If a command fails, read the error and try a corrected approach (max 3 attempts per task) before summarizing.
-- Always give a final summary in the user's language after using tools.`;
+- Always give a final summary in the user's language after using tools.
+
+Memory (long-term, across conversations):
+- You have memory_search, memory_save, memory_delete. Use them — a smart
+  assistant remembers its user.
+- SEARCH memory when the user refers to past work ("seperti biasa", "yang
+  kemarin"), states a preference, or asks something that past context could
+  answer. Don't search for one-off factual questions.
+- SAVE only durable facts: the user's name, preferences, decisions, ongoing
+  projects, corrections ("jangan ingat X" → delete it). Never save trivial
+  chit-chat, one-time requests, or secrets.
+- Before saving, consider a quick memory_search to avoid duplicates.
+- If the user corrects a remembered fact, memory_delete the old one and save
+  the new one.`;
 
 const TOOLS = [
   {
@@ -83,6 +97,55 @@ const TOOLS = [
           maxResults: { type: "number", description: "How many results (default 5, max 8)" },
         },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "memory_search",
+      description:
+        "Search the agent's long-term memory for facts about the user, past preferences, decisions, and projects. Use when past context could help answer.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "What to look for, e.g. \"kopi\" or \"project\" " },
+          limit: { type: "number", description: "Max results (default 5)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "memory_save",
+      description:
+        "Save a durable fact to long-term memory: user preferences, decisions, names, ongoing projects, corrections. Never save trivial chit-chat or secrets.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            description: "One clear fact, e.g. \"User lebih suka jawaban singkat dalam Bahasa Indonesia.\"",
+          },
+        },
+        required: ["content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "memory_delete",
+      description:
+        "Delete a memory by its id (from memory_search results), e.g. when the user corrects or retracts a fact.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The memory id to delete" },
+        },
+        required: ["id"],
       },
     },
   },
@@ -373,6 +436,34 @@ export const Route = createFileRoute("/api/agent")({
                         ? `${output} (gambar sudah ditampilkan ke user)`
                         : output,
                     });
+                  } else if (tc.name === "memory_search") {
+                    const query = String(args.query ?? "").slice(0, 300);
+                    const limit = args.limit
+                      ? clamp(Math.round(Number(args.limit)), 1, 10)
+                      : 5;
+                    send({ type: "tool_call", kind: "memory", command: query });
+                    const outcome = await searchMemories(query, memoryEnv(), limit);
+                    const output = clip(outcome.text);
+                    send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
+                    convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                  } else if (tc.name === "memory_save") {
+                    const content = String(args.content ?? "").slice(0, 2000);
+                    send({
+                      type: "tool_call",
+                      kind: "memory",
+                      command: content.slice(0, 120),
+                    });
+                    const outcome = await saveMemory(content, memoryEnv());
+                    const output = clip(outcome.text);
+                    send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
+                    convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                  } else if (tc.name === "memory_delete") {
+                    const id = String(args.id ?? "").slice(0, 60);
+                    send({ type: "tool_call", kind: "memory", command: `hapus ${id}` });
+                    const outcome = await deleteMemory(id, memoryEnv());
+                    const output = clip(outcome.text);
+                    send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
+                    convo.push({ role: "tool", tool_call_id: tc.id, content: output });
                   } else {
                     convo.push({
                       role: "tool",

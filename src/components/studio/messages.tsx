@@ -1,4 +1,5 @@
 import {
+  Brain,
   Copy,
   GitFork,
   Image as ImageIcon,
@@ -123,7 +124,14 @@ export function MessageList({
             {message.toolCalls && message.toolCalls.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {message.toolCalls.map((tc, tcIndex) => {
-                  const KindIcon = tc.kind === "search" ? Search : tc.kind === "image" ? ImageIcon : Terminal;
+                  const KindIcon =
+                    tc.kind === "search"
+                      ? Search
+                      : tc.kind === "image"
+                        ? ImageIcon
+                        : tc.kind === "memory"
+                          ? Brain
+                          : Terminal;
                   return (
                     <details
                       key={tcIndex}

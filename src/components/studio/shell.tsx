@@ -144,7 +144,10 @@ export function Studio() {
             toolCalls: [
               ...(current?.toolCalls ?? []),
               {
-                kind: kind === "search" || kind === "image" ? kind : "sandbox",
+                kind:
+                  kind === "search" || kind === "image" || kind === "memory"
+                    ? kind
+                    : "sandbox",
                 command,
                 output: "",
                 exitCode: 0,
