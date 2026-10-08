@@ -112,6 +112,39 @@ test("generateAgent throws the server error message on non-OK", async () => {
   }
 });
 
+test("generateAgent routes tool kinds and image payloads", async () => {
+  const restore = mockFetch(async () =>
+    sseStream([
+      { type: "tool_call", kind: "image", command: "a cat astronaut" },
+      {
+        type: "tool_result",
+        output: "Gambar berhasil dibuat (1 gambar, model Gemini).",
+        exitCode: 0,
+        images: ["data:image/png;base64,iVBORw0="],
+      },
+      { type: "tool_call", kind: "search", command: "berita hari ini" },
+      { type: "tool_result", output: "Hasil pencarian web:\n1. Judul", exitCode: 0 },
+      { type: "done", sandboxId: "sbx-1" },
+    ]),
+  );
+  const seen = { calls: [], results: [] };
+  try {
+    await generateAgent(BASE_REQ, {
+      ...collector().handlers,
+      onToolCall: (command, kind) => seen.calls.push([command, kind]),
+      onToolResult: (output, exitCode, images) => seen.results.push([output, exitCode, images]),
+    });
+    assert.deepEqual(seen.calls, [
+      ["a cat astronaut", "image"],
+      ["berita hari ini", "search"],
+    ]);
+    assert.equal(seen.results[0][2][0], "data:image/png;base64,iVBORw0=");
+    assert.equal(seen.results[1][2], undefined);
+  } finally {
+    restore();
+  }
+});
+
 test("generateAgent sends no sandboxId when starting fresh", async () => {
   const restore = mockFetch(async (url, init) => {
     const body = JSON.parse(init.body);

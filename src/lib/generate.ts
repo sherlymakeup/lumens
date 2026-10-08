@@ -106,8 +106,8 @@ export async function generateStream(request: GenerateRequest, handlers: StreamH
 
 export type AgentHandlers = {
   onText: (delta: string) => void;
-  onToolCall: (command: string) => void;
-  onToolResult: (output: string, exitCode: number) => void;
+  onToolCall: (command: string, kind?: string) => void;
+  onToolResult: (output: string, exitCode: number, images?: string[]) => void;
   onDone: (sandboxId?: string) => void;
   onError: (message: string) => void;
   signal?: AbortSignal;
@@ -182,16 +182,18 @@ export async function generateAgent(
           const json = JSON.parse(payload) as {
             type?: string;
             delta?: string;
+            kind?: string;
             command?: string;
             output?: string;
             exitCode?: number;
+            images?: string[];
             sandboxId?: string;
             error?: string;
           };
           if (json.type === "text" && json.delta) handlers.onText(json.delta);
-          else if (json.type === "tool_call") handlers.onToolCall(json.command ?? "");
+          else if (json.type === "tool_call") handlers.onToolCall(json.command ?? "", json.kind);
           else if (json.type === "tool_result")
-            handlers.onToolResult(json.output ?? "", json.exitCode ?? 0);
+            handlers.onToolResult(json.output ?? "", json.exitCode ?? 0, json.images);
           else if (json.type === "done") {
             done = true;
             handlers.onDone(json.sandboxId);

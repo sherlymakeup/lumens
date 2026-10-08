@@ -1,7 +1,9 @@
 import {
   Copy,
   GitFork,
+  Image as ImageIcon,
   RefreshCw,
+  Search,
   Share2,
   Terminal,
   ThumbsDown,
@@ -120,30 +122,46 @@ export function MessageList({
             ) : null}
             {message.toolCalls && message.toolCalls.length > 0 ? (
               <div className="mt-3 space-y-2">
-                {message.toolCalls.map((tc, tcIndex) => (
-                  <details
-                    key={tcIndex}
-                    className="group rounded-xl border border-border bg-card/60 text-[13px]"
-                  >
-                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2">
-                      <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="truncate font-mono text-xs text-muted-foreground">
-                        {tc.command}
-                      </span>
-                      <span
-                        className={cn(
-                          "ml-auto shrink-0 font-mono text-[11px]",
-                          tc.exitCode === 0 ? "text-emerald-500" : "text-destructive",
-                        )}
-                      >
-                        exit {tc.exitCode}
-                      </span>
-                    </summary>
-                    <pre className="max-h-64 overflow-auto border-t border-border px-3 py-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
-                      {tc.output || t["msg.noOutput"]}
-                    </pre>
-                  </details>
-                ))}
+                {message.toolCalls.map((tc, tcIndex) => {
+                  const KindIcon = tc.kind === "search" ? Search : tc.kind === "image" ? ImageIcon : Terminal;
+                  return (
+                    <details
+                      key={tcIndex}
+                      className="group rounded-xl border border-border bg-card/60 text-[13px]"
+                    >
+                      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2">
+                        <KindIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate font-mono text-xs text-muted-foreground">
+                          {tc.command}
+                        </span>
+                        <span
+                          className={cn(
+                            "ml-auto shrink-0 font-mono text-[11px]",
+                            tc.exitCode === 0 ? "text-emerald-500" : "text-destructive",
+                          )}
+                        >
+                          exit {tc.exitCode}
+                        </span>
+                      </summary>
+                      {tc.images && tc.images.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2 border-t border-border p-2">
+                          {tc.images.map((src, imgIndex) => (
+                            <img
+                              key={imgIndex}
+                              src={src}
+                              alt=""
+                              className="w-full rounded-lg border border-border object-contain"
+                              loading="lazy"
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                      <pre className="max-h-64 overflow-auto border-t border-border px-3 py-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
+                        {tc.output || t["msg.noOutput"]}
+                      </pre>
+                    </details>
+                  );
+                })}
               </div>
             ) : null}
             {!streaming && message.content && !message.error ? (

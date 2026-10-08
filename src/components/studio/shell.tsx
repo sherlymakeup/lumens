@@ -135,23 +135,31 @@ export function Studio() {
           assembled += delta;
           patchMessage(conversationId, assistantId, { content: assembled });
         },
-        onToolCall: (command) => {
+        onToolCall: (command, kind) => {
           const current = useStudio
             .getState()
             .conversations.find((item) => item.id === conversationId)
             ?.messages.find((message) => message.id === assistantId);
           patchMessage(conversationId, assistantId, {
-            toolCalls: [...(current?.toolCalls ?? []), { command, output: "", exitCode: 0 }],
+            toolCalls: [
+              ...(current?.toolCalls ?? []),
+              {
+                kind: kind === "search" || kind === "image" ? kind : "sandbox",
+                command,
+                output: "",
+                exitCode: 0,
+              },
+            ],
           });
         },
-        onToolResult: (output, exitCode) => {
+        onToolResult: (output, exitCode, images) => {
           const current = useStudio
             .getState()
             .conversations.find((item) => item.id === conversationId)
             ?.messages.find((message) => message.id === assistantId);
           const calls = [...(current?.toolCalls ?? [])];
           if (calls.length > 0) {
-            calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode };
+            calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode, images };
           }
           patchMessage(conversationId, assistantId, { toolCalls: calls });
         },

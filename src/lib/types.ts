@@ -55,9 +55,11 @@ export type ChatMessage = {
 };
 
 export type ToolCall = {
+  kind?: "sandbox" | "search" | "image";
   command: string;
   output: string;
   exitCode: number;
+  images?: string[];
 };
 
 export type Conversation = {
