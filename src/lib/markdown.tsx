@@ -1,3 +1,6 @@
+import { useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { highlightCode } from "./highlight";
 import { cn } from "./utils";
 
 const ESC: Record<string, string> = {
@@ -111,24 +114,62 @@ function isFenceOrBlock(line: string) {
   );
 }
 
+function CodeBlock({
+  lang,
+  body,
+  copyLabel,
+}: {
+  lang: string;
+  body: string;
+  copyLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const html = useMemo(() => highlightCode(body, lang), [body, lang]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  return (
+    <pre className="md-pre">
+      <div className="md-pre-head">
+        {lang ? <span className="md-lang">{lang}</span> : <span />}
+        <button
+          type="button"
+          className="md-copy-btn"
+          title={copyLabel}
+          aria-label={copyLabel}
+          onClick={() => void copy()}
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        </button>
+      </div>
+      <code dangerouslySetInnerHTML={{ __html: html }} />
+    </pre>
+  );
+}
+
 export function Markdown({
   content,
   className,
+  copyLabel = "Copy",
 }: {
   content: string;
   className?: string;
+  copyLabel?: string;
 }) {
   const blocks = parseBlocks(content);
   return (
     <div className={cn("md-body", className)}>
       {blocks.map((block, index) => {
         if (block.type === "code") {
-          return (
-            <pre key={index} className="md-pre">
-              {block.lang ? <span className="md-lang">{block.lang}</span> : null}
-              <code>{block.body}</code>
-            </pre>
-          );
+          return <CodeBlock key={index} lang={block.lang} body={block.body} copyLabel={copyLabel} />;
         }
         if (block.type === "heading") {
           const Tag = (`h${block.level}` as unknown) as "h1";

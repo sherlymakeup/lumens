@@ -109,7 +109,7 @@ export function MessageList({
                 <MessageSkeleton />
               </div>
             ) : showMarkdown && !message.error ? (
-              <Markdown content={message.content} />
+              <Markdown content={message.content} copyLabel={t["msg.copy"]} />
             ) : (
               <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</p>
             )}
