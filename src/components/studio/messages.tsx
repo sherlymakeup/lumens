@@ -95,6 +95,19 @@ export function MessageList({
             <article key={message.id} className="enter-up flex justify-end"
               style={{ animationDelay: `${Math.min(index, 4) * 40}ms` }}>
               <div className="max-w-[78%] rounded-2xl rounded-br-md border border-border bg-card px-4 py-2.5">
+                {message.attachments && message.attachments.length > 0 ? (
+                  <div className="mb-1.5 flex flex-wrap gap-1.5">
+                    {message.attachments.map((a) => (
+                      <span
+                        key={a.path}
+                        className="inline-flex max-w-40 items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[11px]"
+                        title={a.path}
+                      >
+                        <span className="truncate font-medium">{a.name}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</p>
               </div>
             </article>

@@ -5,7 +5,7 @@ import { generateAgent, generateStream } from "@/lib/generate";
 import { extrasInstruction, MODE_BY_ID, defaultExtras } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
 import { applyDensity, applyFontSize, applyTheme } from "@/lib/theme";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatAttachment, ChatMessage } from "@/lib/types";
 import { uid } from "@/lib/utils";
 import { Composer } from "./composer";
 import { EmptyState } from "./empty-state";
@@ -33,6 +33,7 @@ export function Studio() {
   const [draft, setDraft] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [thinking, setThinking] = useState(false);
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   // Stick to bottom only while the user is already near the bottom —
@@ -121,6 +122,7 @@ export function Studio() {
     userText: string,
     system: string,
     prior: ChatMessage[],
+    atts: ChatAttachment[],
   ) {
     const state = useStudio.getState();
     const conv = state.conversations.find((item) => item.id === conversationId);
@@ -140,6 +142,7 @@ export function Studio() {
         messages: payloadMessages,
         model: state.settings.model,
         sandboxId: conv?.sandboxId,
+        attachments: atts.length > 0 ? atts : undefined,
         params: {
           temperature: state.settings.temperature,
           maxTokens: state.settings.maxTokens,
@@ -209,7 +212,8 @@ export function Studio() {
 
   async function run(userText: string, prior?: ChatMessage[]) {
     const text = userText.trim();
-    if (!text || useStudio.getState().streamingId) return;
+    const atts = attachments;
+    if ((!text && atts.length === 0) || useStudio.getState().streamingId) return;
 
     const current = useStudio.getState().settings;
     if (!current.model.trim()) {
@@ -229,6 +233,7 @@ export function Studio() {
       role: "user",
       content: text,
       createdAt: Date.now(),
+      attachments: atts.length > 0 ? atts : undefined,
     };
     const assistant: ChatMessage = {
       id: uid(),
@@ -241,6 +246,7 @@ export function Studio() {
     setStreamingId(assistant.id);
     setThinking(false);
     setDraft("");
+    setAttachments([]);
 
     const mode = MODE_BY_ID[conv.modeId];
     const extra = extrasInstruction(conv.modeId, conv.extras);
@@ -248,7 +254,7 @@ export function Studio() {
     const system = [mode.system, extra, override].filter(Boolean).join("\n\n");
 
     if (settings.agentMode) {
-      await runAgent(id, assistant.id, text, system, history);
+      await runAgent(id, assistant.id, text, system, history, atts);
       return;
     }
 
@@ -363,6 +369,9 @@ export function Studio() {
           onSubmit={() => void run(draft)}
           onStop={stop}
           streaming={Boolean(streamingId)}
+          attachments={attachments}
+          onAttachments={setAttachments}
+          sandboxId={conversation?.sandboxId}
         />
       </div>
       <SettingsPanel models={models} onModels={setModels} />

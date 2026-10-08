@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, Bot, Square } from "lucide-react";
+import { ArrowUp, Bot, Loader2, Paperclip, Square, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -11,8 +12,10 @@ import {
 import { useStrings } from "@/lib/i18n";
 import { MODE_BY_ID } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
-import type { ModeId } from "@/lib/types";
+import type { ChatAttachment, ModeId } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const MAX_CLIENT_BYTES = 10 * 1024 * 1024;
 
 export function Composer({
   modeId,
@@ -24,6 +27,9 @@ export function Composer({
   onStop,
   streaming,
   disabled,
+  attachments,
+  onAttachments,
+  sandboxId,
 }: {
   modeId: ModeId;
   extras: Record<string, string>;
@@ -34,6 +40,9 @@ export function Composer({
   onStop: () => void;
   streaming: boolean;
   disabled?: boolean;
+  attachments: ChatAttachment[];
+  onAttachments: (next: ChatAttachment[]) => void;
+  sandboxId?: string;
 }) {
   const mode = MODE_BY_ID[modeId];
   const model = useStudio((s) => s.settings.model);
@@ -54,7 +63,69 @@ export function Composer({
     el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
   }, [value]);
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  function readAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = String(reader.result ?? "");
+        const i = url.indexOf(",");
+        resolve(i >= 0 ? url.slice(i + 1) : url);
+      };
+      reader.onerror = () => reject(new Error("gagal baca file"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFiles(list: FileList | null) {
+    if (!list || list.length === 0 || uploading || disabled) return;
+    const files = [...list].slice(0, 5 - attachments.length);
+    if (files.length === 0) {
+      toast.error("Maksimal 5 lampiran per pesan.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const next = [...attachments];
+      for (const file of files) {
+        if (file.size > MAX_CLIENT_BYTES) {
+          toast.error(`"${file.name}" terlalu besar (maks 10 MB).`);
+          continue;
+        }
+        const base64 = await readAsBase64(file);
+        const res = await fetch("/api/agent/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sandboxId,
+            name: file.name,
+            mime: file.type || "application/octet-stream",
+            base64,
+          }),
+        });
+        const body = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          sandboxId?: string;
+          attachment?: ChatAttachment;
+          error?: string;
+        } | null;
+        if (!res.ok || !body?.ok || !body.attachment) {
+          toast.error(body?.error ?? `Gagal upload "${file.name}".`);
+          continue;
+        }
+        next.push(body.attachment);
+      }
+      onAttachments(next);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    const canSend = value.trim() || attachments.length > 0;
     const sendOnEnter = document.documentElement.dataset.sendEnter === "1";
     if (
       event.key === "Enter" &&
@@ -64,12 +135,12 @@ export function Composer({
       sendOnEnter
     ) {
       event.preventDefault();
-      if (!streaming && value.trim()) onSubmit();
+      if (!streaming && canSend) onSubmit();
       return;
     }
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      if (!streaming && value.trim()) onSubmit();
+      if (!streaming && canSend) onSubmit();
     }
   }
 
@@ -109,6 +180,28 @@ export function Composer({
           </div>
         ) : null}
 
+        {attachments.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+            {attachments.map((a) => (
+              <span
+                key={a.path}
+                className="inline-flex max-w-45 items-center gap-1.5 rounded-full border border-border bg-muted/60 py-1 pr-1.5 pl-2.5 text-xs"
+              >
+                <Paperclip className="size-3 shrink-0 text-muted-foreground" />
+                <span className="truncate font-medium">{a.name}</span>
+                <button
+                  type="button"
+                  onClick={() => onAttachments(attachments.filter((x) => x.path !== a.path))}
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={`Hapus ${a.name}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <textarea
           ref={ref}
           value={value}
@@ -123,6 +216,26 @@ export function Composer({
         />
 
         <div className="flex flex-wrap items-center gap-2 px-2 pt-1.5 pb-2">
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => void handleFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={disabled || uploading || streaming || attachments.length >= 5}
+            title="Lampirkan file"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+          >
+            {uploading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Paperclip className="size-3.5" />
+            )}
+          </button>
           <span className="ml-1 hidden min-w-0 items-center gap-1.5 sm:inline-flex">
             <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
             <span className="truncate font-mono text-[11px] text-muted-foreground">
@@ -153,7 +266,7 @@ export function Composer({
           ) : (
             <Button
               onClick={onSubmit}
-              disabled={disabled || !value.trim()}
+              disabled={disabled || (!value.trim() && attachments.length === 0)}
               className="h-9 gap-1.5 px-3.5"
             >
               {t["eng.send"]}

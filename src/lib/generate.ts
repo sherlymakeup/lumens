@@ -120,6 +120,7 @@ export async function generateAgent(
     messages: { role: "system" | "user" | "assistant"; content: string }[];
     model: string;
     sandboxId?: string;
+    attachments?: { name: string; path: string; mime: string; size: number }[];
     params: {
       temperature: number;
       maxTokens: number;
@@ -138,6 +139,7 @@ export async function generateAgent(
       body: JSON.stringify({
         messages: request.messages,
         sandboxId: request.sandboxId,
+        attachments: request.attachments,
         connection: { provider: "custom", model: request.model },
         params: request.params,
       }),

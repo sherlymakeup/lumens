@@ -13,15 +13,31 @@ import {
 } from "@/lib/agent-sandbox";
 import { normalizePlanSteps } from "@/lib/agent-plan";
 import { clamp } from "@/lib/utils";
+import {
+  attachmentNote,
+  buildVisionParts,
+  isImageMime,
+  readImageBase64,
+  type ContentPart,
+  type UploadAttachment,
+} from "@/lib/agent-upload";
 
 const Message = z.object({
   role: z.enum(["system", "user", "assistant"]),
   content: z.string().max(12_000),
 });
 
+const Attachment = z.object({
+  name: z.string().min(1).max(120),
+  path: z.string().min(1).max(220),
+  mime: z.string().max(120).default(""),
+  size: z.number().int().min(0).max(100 * 1024 * 1024),
+});
+
 const Body = z.object({
   messages: z.array(Message).min(1).max(24),
   sandboxId: z.string().min(1).max(120).optional(),
+  attachments: z.array(Attachment).max(5).optional(),
   connection: z.object({
     provider: z.enum(["custom"]),
     model: z.string().min(1).max(120),
@@ -57,6 +73,11 @@ Rules:
   read every result — pick the ones most likely to answer.
 - Keep commands focused and check their output before the next step.
 - The sandbox persists for this conversation (files you create stay available), with a 5-minute idle timeout.
+- Attached files: when the user attaches files, their sandbox paths are listed
+  in the message. Read/edit/analyze them with sandbox_exec — they are already
+  on disk. Attached images are ALSO visible to you directly (vision): describe
+  or analyze what you see, and use sandbox_exec only if the user asks you to
+  edit/transform the image.
 - Never exfiltrate secrets: there are none in the sandbox; don't go looking for any.
 - If a command fails, read the error and try a corrected approach (max 3 attempts per task) before summarizing.
 - Always give a final summary in the user's language after using tools.
@@ -275,7 +296,28 @@ function clip(text: string): string {
   return text.length > MAX_OUTPUT ? text.slice(0, MAX_OUTPUT) + "\n…[output dipotong]" : text;
 }
 
-type ChatMsg = { role: string; content: string; tool_calls?: unknown; tool_call_id?: string };
+/** Ubah content multimodal jadi teks biasa (fallback kalau model menolak vision). */
+function stripVisionParts(convo: ChatMsg[]): boolean {
+  let stripped = false;
+  for (const m of convo) {
+    if (Array.isArray(m.content)) {
+      const text = m.content
+        .filter((p) => p.type === "text")
+        .map((p) => (p.type === "text" ? p.text : ""))
+        .join("\n");
+      m.content = `${text}\n\n[Catatan: model menolak input gambar — file gambar tetap tersedia di path sandbox pada pesan di atas, baca dengan sandbox_exec bila perlu.]`;
+      stripped = true;
+    }
+  }
+  return stripped;
+}
+
+type ChatMsg = {
+  role: string;
+  content: string | ContentPart[];
+  tool_calls?: unknown;
+  tool_call_id?: string;
+};
 
 export const Route = createFileRoute("/api/agent")({
   server: {
@@ -285,7 +327,7 @@ export const Route = createFileRoute("/api/agent")({
         if (!parsed.success) {
           return Response.json({ error: "Invalid request." }, { status: 400 });
         }
-        const { messages, connection, params } = parsed.data;
+        const { messages, connection, params, attachments } = parsed.data;
         let sandboxId: string | undefined = parsed.data.sandboxId;
 
         const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
@@ -348,7 +390,11 @@ export const Route = createFileRoute("/api/agent")({
                 model: connection.model,
                 messages: convo.map((m) => ({
                   role: m.role,
-                  content: String(m.content ?? "").slice(0, 8000),
+                  content: Array.isArray(m.content)
+                    ? m.content.map((p) =>
+                        p.type === "text" ? { ...p, text: p.text.slice(0, 8000) } : p,
+                      )
+                    : String(m.content ?? "").slice(0, 8000),
                   ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}),
                   ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {}),
                 })),
@@ -404,8 +450,35 @@ export const Route = createFileRoute("/api/agent")({
                 { role: "system", content: AGENT_SYSTEM },
                 ...messages.map((m) => ({ role: m.role, content: m.content })),
               ];
+
+              // Lampiran: tempel catatan path ke pesan user terakhir + vision untuk gambar.
+              const atts = (attachments ?? []).filter(
+                (a) => a.path.startsWith("uploads/") && !a.path.includes(".."),
+              );
+              if (atts.length > 0) {
+                let uidx = convo.length - 1;
+                while (uidx >= 0 && convo[uidx].role !== "user") uidx--;
+                if (uidx >= 0) {
+                  const notes = atts.map((a) => attachmentNote(a)).join("\n");
+                  const base =
+                    typeof convo[uidx].content === "string" ? convo[uidx].content : "";
+                  const text = `${base}\n\nFile terlampir:\n${notes}`;
+                  const images: { mime: string; base64: string }[] = [];
+                  for (const a of atts) {
+                    if (!isImageMime(a.mime)) continue;
+                    const r = await readImageBase64(
+                      (cmd) => session.run(cmd, 30_000),
+                      a.path,
+                    );
+                    if (r.ok) images.push({ mime: a.mime, base64: r.base64 });
+                  }
+                  convo[uidx] = { ...convo[uidx], content: buildVisionParts(text, images) };
+                }
+              }
+
               let finalText = "";
               let toolsSupported = true;
+              let visionFallback = false;
 
               for (let i = 0; i < MAX_ITERATIONS; i++) {
                 let content = "";
@@ -413,9 +486,14 @@ export const Route = createFileRoute("/api/agent")({
                 try {
                   ({ content, toolCalls } = await callModel(convo, toolsSupported));
                 } catch (error) {
-                  // Gateway may reject the tools param — retry once without tools.
-                  if (toolsSupported && /400/.test(String(error))) {
+                  const badRequest = /400/.test(String(error));
+                  if (badRequest && toolsSupported) {
+                    // Gateway may reject the tools param — retry once without tools.
                     toolsSupported = false;
+                    ({ content, toolCalls } = await callModel(convo, false));
+                  } else if (badRequest && !visionFallback && stripVisionParts(convo)) {
+                    // Model menolak vision — coba lagi teks-only, file tetap di sandbox.
+                    visionFallback = true;
                     ({ content, toolCalls } = await callModel(convo, false));
                   } else {
                     throw error;

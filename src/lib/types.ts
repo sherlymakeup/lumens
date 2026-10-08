@@ -43,6 +43,13 @@ export type StudioSettings = {
   systemPromptOverride: string;
 };
 
+export type ChatAttachment = {
+  name: string;
+  path: string;
+  mime: string;
+  size: number;
+};
+
 export type ChatMessage = {
   id: string;
   role: Exclude<Role, "system">;
@@ -53,6 +60,7 @@ export type ChatMessage = {
   elapsedMs?: number;
   toolCalls?: ToolCall[];
   plan?: import("./agent-plan").PlanStep[];
+  attachments?: ChatAttachment[];
 };
 
 export type AgentFile = {

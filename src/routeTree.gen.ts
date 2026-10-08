@@ -23,6 +23,7 @@ import { Route as EnginesCodeRouteImport } from './routes/engines/code'
 import { Route as EnginesContentRouteImport } from './routes/engines/content'
 import { Route as EnginesDesignRouteImport } from './routes/engines/design'
 import { Route as EnginesPrototypeRouteImport } from './routes/engines/prototype'
+import { Route as ApiAgentUploadRouteImport } from './routes/api/agent/upload'
 import { Route as ApiSandboxExecuteRouteImport } from './routes/api/sandbox/execute'
 
 const IndexRoute = IndexRouteImport.update({
@@ -95,6 +96,11 @@ const EnginesPrototypeRoute = EnginesPrototypeRouteImport.update({
   path: '/engines/prototype',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentUploadRoute = ApiAgentUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => ApiAgentRoute,
+} as any)
 const ApiSandboxExecuteRoute = ApiSandboxExecuteRouteImport.update({
   id: '/api/sandbox/execute',
   path: '/api/sandbox/execute',
@@ -106,7 +112,7 @@ export interface FileRoutesByFullPath {
   '/connection': typeof ConnectionRoute
   '/dashboard': typeof DashboardRoute
   '/projects': typeof ProjectsRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
+  '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
 }
 export interface FileRoutesByTo {
@@ -123,7 +130,7 @@ export interface FileRoutesByTo {
   '/connection': typeof ConnectionRoute
   '/dashboard': typeof DashboardRoute
   '/projects': typeof ProjectsRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
+  '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
 }
 export interface FileRoutesById {
@@ -141,7 +149,7 @@ export interface FileRoutesById {
   '/connection': typeof ConnectionRoute
   '/dashboard': typeof DashboardRoute
   '/projects': typeof ProjectsRoute
-  '/api/agent': typeof ApiAgentRoute
+  '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
+  '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
 }
 export interface FileRouteTypes {
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/engines/content'
     | '/engines/design'
     | '/engines/prototype'
+    | '/api/agent/upload'
     | '/api/sandbox/execute'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/engines/content'
     | '/engines/design'
     | '/engines/prototype'
+    | '/api/agent/upload'
     | '/api/sandbox/execute'
   id:
     | '__root__'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/engines/content'
     | '/engines/design'
     | '/engines/prototype'
+    | '/api/agent/upload'
     | '/api/sandbox/execute'
   fileRoutesById: FileRoutesById
 }
@@ -212,7 +224,7 @@ export interface RootRouteChildren {
   ConnectionRoute: typeof ConnectionRoute
   DashboardRoute: typeof DashboardRoute
   ProjectsRoute: typeof ProjectsRoute
-  ApiAgentRoute: typeof ApiAgentRoute
+  ApiAgentRoute: typeof ApiAgentRouteWithChildren
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImagesRoute: typeof ApiImagesRoute
@@ -325,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EnginesPrototypeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/upload': {
+      id: '/api/agent/upload'
+      path: '/upload'
+      fullPath: '/api/agent/upload'
+      preLoaderRoute: typeof ApiAgentUploadRouteImport
+      parentRoute: typeof ApiAgentRoute
+    }
     '/api/sandbox/execute': {
       id: '/api/sandbox/execute'
       path: '/api/sandbox/execute'
@@ -335,12 +354,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiAgentRouteChildren {
+  ApiAgentUploadRoute: typeof ApiAgentUploadRoute
+}
+
+const ApiAgentRouteChildren: ApiAgentRouteChildren = {
+  ApiAgentUploadRoute: ApiAgentUploadRoute,
+}
+
+const ApiAgentRouteWithChildren = ApiAgentRoute._addFileChildren(
+  ApiAgentRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConnectionRoute: ConnectionRoute,
   DashboardRoute: DashboardRoute,
   ProjectsRoute: ProjectsRoute,
-  ApiAgentRoute: ApiAgentRoute,
+  ApiAgentRoute: ApiAgentRouteWithChildren,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImagesRoute: ApiImagesRoute,
