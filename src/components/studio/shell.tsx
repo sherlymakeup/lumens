@@ -35,6 +35,10 @@ export function Studio() {
   const [thinking, setThinking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // Stick to bottom only while the user is already near the bottom —
+  // otherwise streaming would yank the scroll away from what they're reading.
+  const stickRef = useRef(true);
+  const convIdRef = useRef(activeId);
 
   const conversation = useMemo(
     () => conversations.find((item) => item.id === activeId) ?? null,
@@ -86,8 +90,23 @@ export function Studio() {
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
+    const onScroll = () => {
+      stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    if (convIdRef.current !== activeId) {
+      convIdRef.current = activeId;
+      stickRef.current = true;
+    }
+    if (!stickRef.current) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages, thinking, streamingId]);
+  }, [messages, thinking, streamingId, activeId]);
 
   function stop() {
     abortRef.current?.abort();
@@ -320,7 +339,7 @@ export function Studio() {
         style={{ backgroundImage: "var(--canvas-wash)" }}
       >
         <Header models={models} />
-        <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {messages.length === 0 ? (
             <EmptyState modeId={modeId} onPick={(prompt) => void run(prompt)} />
           ) : (

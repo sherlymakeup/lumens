@@ -115,7 +115,7 @@ export function Composer({
           placeholder={mode.placeholder}
           disabled={disabled}
           rows={1}
-          className="max-h-55 min-h-14 w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
+          className="max-h-55 min-h-10 w-full resize-none bg-transparent px-4 pt-2.5 pb-1 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
         />
 
         <div className="flex flex-wrap items-center gap-2 px-2 pt-1.5 pb-2">

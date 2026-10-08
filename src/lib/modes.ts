@@ -60,7 +60,7 @@ export const MODES: StudioMode[] = [
     label: "Chat",
     hint: "Think out loud",
     description: "Open-ended conversation for questions, planning, and back-and-forth.",
-    placeholder: "Ask anything, or paste a problem to work through…",
+    placeholder: "Ask anything…",
     system:
       "You are XDIRGA, a precise, calm assistant. Answer directly. Use markdown when it helps. Do not add filler openings.",
     starters: [
