@@ -225,7 +225,6 @@ export function Studio() {
             <MessageList
               messages={messages}
               streamingId={streamingId}
-              thinking={thinking}
               showMarkdown={settings.showMarkdown}
               onRegenerate={regenerate}
             />

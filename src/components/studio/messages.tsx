@@ -9,13 +9,11 @@ import { MessageSkeleton } from "./skeleton";
 export function MessageList({
   messages,
   streamingId,
-  thinking,
   showMarkdown,
   onRegenerate,
 }: {
   messages: ChatMessage[];
   streamingId: string | null;
-  thinking: boolean;
   showMarkdown: boolean;
   onRegenerate: () => void;
 }) {
@@ -41,11 +39,10 @@ export function MessageList({
               {message.role === "user" ? "You" : "XDIRGA"}
             </div>
             {empty ? (
-              thinking ? (
-                <p className="shimmer-text text-sm">Thinking</p>
-              ) : (
+              <div className="space-y-3" aria-live="polite">
+                <p className="shimmer-text text-sm font-medium">Thinking…</p>
                 <MessageSkeleton />
-              )
+              </div>
             ) : message.role === "assistant" && showMarkdown && !message.error ? (
               <Markdown content={message.content} />
             ) : (
