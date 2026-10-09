@@ -12,7 +12,6 @@ import { checkHealth } from "@/lib/generate";
 import { useStudio } from "@/lib/store";
 import { useStrings } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { HistoryPopover } from "./history-popover";
 
 function HealthChip() {
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
@@ -106,7 +105,6 @@ export function Header({ models }: { models: string[] }) {
           {settings.model || t["header.noModels"]}
         </span>
       )}
-      <HistoryPopover />
       <Button
         variant="outline"
         size="icon"

@@ -19,6 +19,7 @@ type StudioState = {
   conversations: Conversation[];
   activeId: string | null;
   sidebarOpen: boolean;
+  sidebarCollapsed: boolean;
   settingsOpen: boolean;
   settingsSection: string;
   streamingId: string | null;
@@ -29,6 +30,7 @@ type StudioState = {
   setSettings: (partial: Partial<StudioSettings>) => void;
   resetSettings: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setSettingsSection: (section: string) => void;
   newConversation: () => string;
@@ -64,6 +66,7 @@ export const useStudio = create<StudioState>()(
       conversations: [],
       activeId: null,
       sidebarOpen: false,
+      sidebarCollapsed: false,
       settingsOpen: false,
       settingsSection: "connection",
       streamingId: null,
@@ -84,6 +87,7 @@ export const useStudio = create<StudioState>()(
         set({ settings: DEFAULT_SETTINGS });
       },
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSettingsSection: (settingsSection) => set({ settingsSection }),
       newConversation: () => {

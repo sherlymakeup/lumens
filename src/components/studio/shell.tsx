@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PanelLeftOpen } from "lucide-react";
 import { toast } from "sonner";
 import { generateAgent, generateStream } from "@/lib/generate";
 import { resolveAgentSandboxId } from "@/lib/agent-upload";
@@ -49,6 +50,8 @@ export function Studio() {
   const streamingId = useStudio((s) => s.streamingId);
   const sidebarOpen = useStudio((s) => s.sidebarOpen);
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
+  const sidebarCollapsed = useStudio((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useStudio((s) => s.setSidebarCollapsed);
   const newConversation = useStudio((s) => s.newConversation);
   const addMessage = useStudio((s) => s.addMessage);
   const patchMessage = useStudio((s) => s.patchMessage);
@@ -375,46 +378,66 @@ export function Studio() {
     void run(lastUser.content, cut);
   }
 
+  const composerNode = (
+    <Composer
+      value={draft}
+      onChange={setDraft}
+      onSubmit={() => void run(draft)}
+      onStop={stop}
+      streaming={Boolean(streamingId)}
+      attachments={attachments}
+      onAttachments={setAttachments}
+      sandboxId={conversation?.sandboxId}
+      threadId={conversation?.id}
+      onUploadSandboxId={setUploadSandboxId}
+    />
+  );
+
   return (
     <div
       className="flex h-dvh overflow-hidden bg-background text-foreground"
       data-density={settings.density}
     >
-      <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
-        <Sidebar />
-      </aside>
+      {sidebarCollapsed ? null : (
+        <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
+          <Sidebar />
+        </aside>
+      )}
       <MobileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
       <div
-        className="flex min-h-0 min-w-0 flex-1 flex-col"
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
         style={{ backgroundImage: "var(--canvas-wash)" }}
       >
+        {sidebarCollapsed ? (
+          <button
+            type="button"
+            aria-label={t["nav.expandSidebar"]}
+            onClick={() => setSidebarCollapsed(false)}
+            className="absolute top-3.5 left-3 z-10 hidden rounded-lg border border-border bg-card p-2 text-muted-foreground shadow-sm hover:text-foreground md:block"
+          >
+            <PanelLeftOpen className="size-4" />
+          </button>
+        ) : null}
         <Header models={models} />
-        <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {messages.length === 0 ? (
-            <EmptyState onPick={(prompt) => void run(prompt)} />
-          ) : (
-            <MessageList
-              messages={messages}
-              streamingId={streamingId}
-              showMarkdown={settings.showMarkdown}
-              onRegenerate={regenerate}
-              phase={streamingId ? agentPhase : null}
-            />
-          )}
-        </div>
-        <Composer
-          value={draft}
-          onChange={setDraft}
-          onSubmit={() => void run(draft)}
-          onStop={stop}
-          streaming={Boolean(streamingId)}
-          attachments={attachments}
-          onAttachments={setAttachments}
-          sandboxId={conversation?.sandboxId}
-          threadId={conversation?.id}
-          onUploadSandboxId={setUploadSandboxId}
-        />
+        {messages.length === 0 ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <EmptyState onPick={(prompt) => void run(prompt)} composer={composerNode} />
+          </div>
+        ) : (
+          <>
+            <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <MessageList
+                messages={messages}
+                streamingId={streamingId}
+                showMarkdown={settings.showMarkdown}
+                onRegenerate={regenerate}
+                phase={streamingId ? agentPhase : null}
+              />
+            </div>
+            {composerNode}
+          </>
+        )}
       </div>
       <SettingsPanel models={models} onModels={setModels} />
     </div>
