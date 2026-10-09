@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { checkHealth } from "@/lib/generate";
-import { MODE_BY_ID } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
 import { useStrings } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -57,14 +56,12 @@ function HealthChip() {
 }
 
 export function Header({ models }: { models: string[] }) {
-  const modeId = useStudio((s) => s.modeId);
   const activeId = useStudio((s) => s.activeId);
   const conversations = useStudio((s) => s.conversations);
   const settings = useStudio((s) => s.settings);
   const setSettings = useStudio((s) => s.setSettings);
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
   const setSettingsOpen = useStudio((s) => s.setSettingsOpen);
-  const mode = MODE_BY_ID[modeId];
   const t = useStrings();
   const options = models;
   const modelValue = options.includes(settings.model) ? settings.model : undefined;
@@ -86,7 +83,6 @@ export function Header({ models }: { models: string[] }) {
       </Button>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{sessionTitle}</div>
-        <div className="truncate text-[11px] text-muted-foreground">{t[mode.hint]}</div>
       </div>
       <HealthChip />
       {options.length > 0 ? (

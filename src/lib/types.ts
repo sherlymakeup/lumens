@@ -1,29 +1,9 @@
-import type { StringKey } from "./i18n";
 export type Provider = "custom";
 export type ThemeMode = "dark" | "light" | "system";
 export type FontSize = "sm" | "md" | "lg";
 export type Density = "comfortable" | "compact";
 export type Lang = "id" | "en";
 export type Role = "system" | "user" | "assistant";
-
-export type ModeId =
-  | "chat"
-  | "write"
-  | "rewrite"
-  | "summarize"
-  | "translate"
-  | "code"
-  | "email"
-  | "social"
-  | "ideas"
-  | "explain";
-
-export type ExtraField = {
-  key: string;
-  label: StringKey;
-  options: { value: string; label: StringKey }[];
-  defaultValue: string;
-};
 
 export type StudioSettings = {
   provider: Provider;
@@ -42,6 +22,8 @@ export type StudioSettings = {
   showMarkdown: boolean;
   agentMode: boolean;
   systemPromptOverride: string;
+  tone: string;
+  length: string;
 };
 
 export type ChatAttachment = {
@@ -82,9 +64,7 @@ export type ToolCall = {
 
 export type Conversation = {
   id: string;
-  modeId: ModeId;
   title: string;
-  extras: Record<string, string>;
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
@@ -159,4 +139,6 @@ export const DEFAULT_SETTINGS: StudioSettings = {
   showMarkdown: true,
   agentMode: false,
   systemPromptOverride: "",
+  tone: "neutral",
+  length: "standard",
 };

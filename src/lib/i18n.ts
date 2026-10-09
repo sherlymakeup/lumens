@@ -251,6 +251,12 @@ const id = {
   "cmp.attachFile": "Lampirkan file",
   "cmp.attachAgentOnly": "Lampiran hanya didukung dalam mode Agent",
   "cmp.mode": "Mode",
+  "cmp.agentPlaceholder": "Minta agent mengerjakan sesuatu…",
+  "empty.title": "Mau kerjakan apa?",
+  "empty.desc": "Agent siap membantu — tanya, tulis, hitung, riset web, atau kerjakan tugas lewat sandbox.",
+  "empty.s1": "Ringkaskan artikel ini jadi poin-poin penting — link-nya akan kutempel.",
+  "empty.s2": "Buatkan draf email follow-up yang sopan tapi tegas.",
+  "empty.s3": "Riset harga laptop bekas di marketplace dan buatkan perbandingannya.",
 
   "sh.chooseModelFirst": "Pilih model di Settings dulu.",
 
@@ -636,6 +642,12 @@ const en: Record<StringKey, string> = {
   "cmp.attachFile": "Attach file",
   "cmp.attachAgentOnly": "Attachments only work in Agent mode",
   "cmp.mode": "Mode",
+  "cmp.agentPlaceholder": "Ask the agent to do something…",
+  "empty.title": "What are we working on?",
+  "empty.desc": "The agent is ready — ask, write, compute, research the web, or get things done via sandbox.",
+  "empty.s1": "Summarize this article into key points — I'll paste the link.",
+  "empty.s2": "Draft a polite but firm follow-up email.",
+  "empty.s3": "Research second-hand laptop prices on marketplaces and compare them.",
 
   "sh.chooseModelFirst": "Choose a model in Settings first.",
 

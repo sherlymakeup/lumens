@@ -1,13 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { MODE_BY_ID, defaultExtras } from "./modes";
 import { applyDensity, applyFontSize, applyTheme } from "./theme";
 import type {
   ChatMessage,
   Conversation,
   CustomModel,
   EngineId,
-  ModeId,
   Project,
   StudioSettings,
 } from "./types";
@@ -20,7 +18,6 @@ type StudioState = {
   settings: StudioSettings;
   conversations: Conversation[];
   activeId: string | null;
-  modeId: ModeId;
   sidebarOpen: boolean;
   settingsOpen: boolean;
   settingsSection: string;
@@ -31,16 +28,14 @@ type StudioState = {
   setHydrated: () => void;
   setSettings: (partial: Partial<StudioSettings>) => void;
   resetSettings: () => void;
-  setMode: (modeId: ModeId) => void;
   setSidebarOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setSettingsSection: (section: string) => void;
-  newConversation: (modeId?: ModeId) => string;
+  newConversation: () => string;
   forkConversation: (conversationId: string, messageId: string) => string | null;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   renameConversation: (id: string, title: string) => void;
-  setExtras: (conversationId: string, extras: Record<string, string>) => void;
   addMessage: (conversationId: string, message: ChatMessage) => void;
   patchMessage: (conversationId: string, messageId: string, patch: Partial<ChatMessage>) => void;
   setSandboxId: (conversationId: string, sandboxId: string) => void;
@@ -68,7 +63,6 @@ export const useStudio = create<StudioState>()(
       settings: DEFAULT_SETTINGS,
       conversations: [],
       activeId: null,
-      modeId: "write",
       sidebarOpen: false,
       settingsOpen: false,
       settingsSection: "connection",
@@ -89,33 +83,19 @@ export const useStudio = create<StudioState>()(
         applyChrome(DEFAULT_SETTINGS);
         set({ settings: DEFAULT_SETTINGS });
       },
-      setMode: (modeId) => {
-        const existing = get()
-          .conversations.filter((item) => item.modeId === modeId)
-          .sort((a, b) => b.updatedAt - a.updatedAt)[0];
-        set({
-          modeId,
-          activeId: existing?.id ?? null,
-          sidebarOpen: false,
-        });
-      },
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSettingsSection: (settingsSection) => set({ settingsSection }),
-      newConversation: (modeId) => {
-        const mode = modeId ?? get().modeId;
+      newConversation: () => {
         const now = Date.now();
         const conversation: Conversation = {
           id: newThreadId(),
-          modeId: mode,
           title: "Untitled",
-          extras: defaultExtras(mode),
           messages: [],
           createdAt: now,
           updatedAt: now,
         };
         set((state) => ({
-          modeId: mode,
           activeId: conversation.id,
           conversations: [conversation, ...state.conversations],
           sidebarOpen: false,
@@ -140,7 +120,6 @@ export const useStudio = create<StudioState>()(
         set((state) => ({
           conversations: [forked, ...state.conversations],
           activeId: forked.id,
-          modeId: forked.modeId,
           sidebarOpen: false,
         }));
         return forked.id;
@@ -148,19 +127,18 @@ export const useStudio = create<StudioState>()(
       selectConversation: (id) => {
         const found = get().conversations.find((item) => item.id === id);
         if (!found) return;
-        set({ activeId: id, modeId: found.modeId, sidebarOpen: false });
+        set({ activeId: id, sidebarOpen: false });
       },
       deleteConversation: (id) => {
-        const { conversations, activeId, modeId } = get();
+        const { conversations, activeId } = get();
         const next = conversations.filter((item) => item.id !== id);
         const fallback =
           activeId === id
-            ? (next.find((item) => item.modeId === modeId) ?? next[0] ?? null)
+            ? (next[0] ?? null)
             : conversations.find((item) => item.id === activeId) ?? null;
         set({
           conversations: next,
           activeId: fallback?.id ?? null,
-          modeId: fallback?.modeId ?? modeId,
         });
       },
       renameConversation: (id, title) => {
@@ -168,13 +146,6 @@ export const useStudio = create<StudioState>()(
         set((state) => ({
           conversations: state.conversations.map((item) =>
             item.id === id ? { ...item, title: clean, updatedAt: Date.now() } : item,
-          ),
-        }));
-      },
-      setExtras: (conversationId, extras) => {
-        set((state) => ({
-          conversations: state.conversations.map((item) =>
-            item.id === conversationId ? { ...item, extras, updatedAt: Date.now() } : item,
           ),
         }));
       },
@@ -267,7 +238,6 @@ export const useStudio = create<StudioState>()(
           })),
         })),
         activeId: state.activeId,
-        modeId: state.modeId,
         engineModels: state.engineModels,
         customModels: state.customModels,
         projects: state.projects,

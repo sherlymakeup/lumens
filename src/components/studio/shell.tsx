@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { generateAgent, generateStream } from "@/lib/generate";
 import { resolveAgentSandboxId } from "@/lib/agent-upload";
-import { extrasInstruction, MODE_BY_ID, defaultExtras } from "@/lib/modes";
+import { styleInstruction } from "@/lib/style";
 import { useStudio } from "@/lib/store";
-import { useStrings } from "@/lib/i18n";
+import { useStrings, type StringKey } from "@/lib/i18n";
 import { applyDensity, applyFontSize, applyTheme } from "@/lib/theme";
 import type { ChatAttachment, ChatMessage } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -15,6 +15,10 @@ import { MessageList } from "./messages";
 import { SettingsPanel } from "./settings";
 import { Sidebar } from "./sidebar";
 import { MobileSidebar } from "./mobile-sidebar";
+
+/** System prompt generik untuk jalur non-agent (tanpa tools). */
+const CHAT_SYSTEM =
+  "You are XDIRGA, a precise, calm assistant. Answer directly. Use markdown when it helps. Do not add filler openings.";
 
 /** Petakan tool kind dari SSE agent ke label status (key i18n "status.*"). */
 function phaseForToolKind(kind?: string): string {
@@ -40,7 +44,6 @@ export function Studio() {
   const t = useStrings();
   const setHydrated = useStudio((s) => s.setHydrated);
   const settings = useStudio((s) => s.settings);
-  const modeId = useStudio((s) => s.modeId);
   const conversations = useStudio((s) => s.conversations);
   const activeId = useStudio((s) => s.activeId);
   const streamingId = useStudio((s) => s.streamingId);
@@ -51,7 +54,6 @@ export function Studio() {
   const patchMessage = useStudio((s) => s.patchMessage);
   const setStreamingId = useStudio((s) => s.setStreamingId);
   const setSandboxId = useStudio((s) => s.setSandboxId);
-  const setExtras = useStudio((s) => s.setExtras);
 
   const [draft, setDraft] = useState("");
   const [models, setModels] = useState<string[]>([]);
@@ -71,7 +73,6 @@ export function Studio() {
     () => conversations.find((item) => item.id === activeId) ?? null,
     [conversations, activeId],
   );
-  const extras = conversation?.extras ?? defaultExtras(modeId);
   const messages = conversation?.messages ?? [];
 
   useEffect(() => {
@@ -256,7 +257,7 @@ export function Studio() {
     }
 
     let id = useStudio.getState().activeId;
-    if (!id) id = newConversation(modeId);
+    if (!id) id = newConversation();
     const conv = useStudio.getState().conversations.find((item) => item.id === id) ?? null;
     if (!conv) return;
 
@@ -290,10 +291,10 @@ export function Studio() {
     setAttachments([]);
     setUploadSandboxId(null);
 
-    const mode = MODE_BY_ID[conv.modeId];
-    const extra = extrasInstruction(conv.modeId, conv.extras, t);
+    const style = styleInstruction(settings.tone, settings.length, t);
     const override = settings.systemPromptOverride.trim();
-    const system = [mode.system, extra, override].filter(Boolean).join("\n\n");
+    const system = [style, override].filter(Boolean).join("\n\n");
+    const chatSystem = [CHAT_SYSTEM, style, override].filter(Boolean).join("\n\n");
 
     if (settings.agentMode) {
       await runAgent(id, assistant.id, text, system, history, atts);
@@ -301,7 +302,7 @@ export function Studio() {
     }
 
     const payloadMessages = [
-      { role: "system" as const, content: system },
+      { role: "system" as const, content: chatSystem },
       ...history.map((message) => ({ role: message.role, content: message.content })),
       { role: "user" as const, content: text },
     ];
@@ -391,7 +392,7 @@ export function Studio() {
         <Header models={models} />
         <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {messages.length === 0 ? (
-            <EmptyState modeId={modeId} onPick={(prompt) => void run(prompt)} />
+            <EmptyState onPick={(prompt) => void run(prompt)} />
           ) : (
             <MessageList
               messages={messages}
@@ -403,12 +404,6 @@ export function Studio() {
           )}
         </div>
         <Composer
-          modeId={modeId}
-          extras={extras}
-          onExtras={(next) => {
-            const id = conversation?.id ?? newConversation(modeId);
-            setExtras(id, next);
-          }}
           value={draft}
           onChange={setDraft}
           onSubmit={() => void run(draft)}

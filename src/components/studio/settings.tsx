@@ -16,6 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchModels } from "@/lib/generate";
+import { LENGTH_OPTIONS, TONE_OPTIONS } from "@/lib/style";
 import { LANGS, useStrings, type StringKey } from "@/lib/i18n";
 import { useStudio } from "@/lib/store";
 import { DEFAULT_SETTINGS } from "@/lib/types";
@@ -243,6 +244,40 @@ export function SettingsPanel({
                         setSettings({ presencePenalty: presencePenalty ?? 0 })
                       }
                     />
+                  </Field>
+                  <Field label={t["extra.tone.label"]}>
+                    <Select
+                      value={settings.tone}
+                      onValueChange={(tone) => setSettings({ tone })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TONE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {t[option.label]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label={t["extra.length.label"]}>
+                    <Select
+                      value={settings.length}
+                      onValueChange={(length) => setSettings({ length })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LENGTH_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {t[option.label]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </Field>
                   <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-3">
                     <div>
