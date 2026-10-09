@@ -1,6 +1,7 @@
 import {
   Check,
   Copy,
+  FileDown,
   GitFork,
   Loader2,
   RefreshCw,
@@ -164,6 +165,33 @@ export function MessageList({
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : null}
+            {/* File deliverable dari tool calls — tampil di chat sebagai kartu unduh.
+                Detail prosesnya ada di panel kanan. */}
+            {message.toolCalls?.some((tc) => tc.files && tc.files.length > 0) ? (
+              <div className="mt-3 space-y-2">
+                {message.toolCalls.flatMap((tc) => tc.files ?? []).map((file, fileIndex) => (
+                  <a
+                    key={fileIndex}
+                    href={`data:${file.mime};base64,${file.base64}`}
+                    download={file.name}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 transition-colors hover:border-primary/50"
+                  >
+                    <FileDown className="size-5 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{file.name}</span>
+                      <span className="block font-mono text-[11px] text-muted-foreground">
+                        {file.size >= 1048576
+                          ? `${(file.size / 1048576).toFixed(1)} MB`
+                          : `${(file.size / 1024).toFixed(1)} KB`}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-primary">
+                      {t["msg.download"] ?? "Unduh"}
+                    </span>
+                  </a>
+                ))}
               </div>
             ) : null}
             {!streaming && message.content && !message.error ? (

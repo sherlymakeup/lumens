@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStudio } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { LumenMark } from "./mark";
 import { useStrings, type StringKey } from "@/lib/i18n";
 
 /** Nav utama ala Grok: Agent (= Chat di Grok), lalu Dasbor. */
@@ -223,7 +222,6 @@ export function Sidebar({ className }: { className?: string }) {
         >
           <PanelLeftClose className="size-4" />
         </button>
-        <LumenMark />
         <div className="min-w-0 flex-1">
           <div className="font-display truncate text-lg leading-none tracking-tight">
             XDIRGA <span className="text-primary">TOOLS</span>

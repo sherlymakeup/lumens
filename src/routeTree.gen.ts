@@ -25,6 +25,7 @@ import { Route as EnginesCodeRouteImport } from './routes/engines/code'
 import { Route as EnginesContentRouteImport } from './routes/engines/content'
 import { Route as EnginesDesignRouteImport } from './routes/engines/design'
 import { Route as EnginesPrototypeRouteImport } from './routes/engines/prototype'
+import { Route as ThreadThreadIdRouteImport } from './routes/thread.$threadId'
 import { Route as ApiAgentUploadRouteImport } from './routes/api/agent/upload'
 import { Route as ApiConnectionsIdRouteImport } from './routes/api/connections.$id'
 import { Route as ApiSandboxExecuteRouteImport } from './routes/api/sandbox/execute'
@@ -110,6 +111,11 @@ const EnginesPrototypeRoute = EnginesPrototypeRouteImport.update({
   path: '/engines/prototype',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ThreadThreadIdRoute = ThreadThreadIdRouteImport.update({
+  id: '/thread/$threadId',
+  path: '/thread/$threadId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentUploadRoute = ApiAgentUploadRouteImport.update({
   id: '/upload',
   path: '/upload',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
+  '/thread/$threadId': typeof ThreadThreadIdRoute
   '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
+  '/thread/$threadId': typeof ThreadThreadIdRoute
   '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
+  '/thread/$threadId': typeof ThreadThreadIdRoute
   '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/engines/content'
     | '/engines/design'
     | '/engines/prototype'
+    | '/thread/$threadId'
     | '/api/agent/upload'
     | '/api/connections/$id'
     | '/api/sandbox/execute'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/engines/content'
     | '/engines/design'
     | '/engines/prototype'
+    | '/thread/$threadId'
     | '/api/agent/upload'
     | '/api/connections/$id'
     | '/api/sandbox/execute'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/engines/content'
     | '/engines/design'
     | '/engines/prototype'
+    | '/thread/$threadId'
     | '/api/agent/upload'
     | '/api/connections/$id'
     | '/api/sandbox/execute'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   EnginesContentRoute: typeof EnginesContentRoute
   EnginesDesignRoute: typeof EnginesDesignRoute
   EnginesPrototypeRoute: typeof EnginesPrototypeRoute
+  ThreadThreadIdRoute: typeof ThreadThreadIdRoute
   ApiSandboxExecuteRoute: typeof ApiSandboxExecuteRoute
 }
 
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EnginesPrototypeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/thread/$threadId': {
+      id: '/thread/$threadId'
+      path: '/thread/$threadId'
+      fullPath: '/thread/$threadId'
+      preLoaderRoute: typeof ThreadThreadIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/upload': {
       id: '/api/agent/upload'
       path: '/upload'
@@ -484,6 +504,7 @@ const rootRouteChildren: RootRouteChildren = {
   EnginesContentRoute: EnginesContentRoute,
   EnginesDesignRoute: EnginesDesignRoute,
   EnginesPrototypeRoute: EnginesPrototypeRoute,
+  ThreadThreadIdRoute: ThreadThreadIdRoute,
   ApiSandboxExecuteRoute: ApiSandboxExecuteRoute,
 }
 export const routeTree = rootRouteImport

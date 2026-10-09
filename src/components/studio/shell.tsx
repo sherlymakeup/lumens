@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelLeftOpen } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { generateAgent, generateStream } from "@/lib/generate";
 import { resolveAgentSandboxId } from "@/lib/agent-upload";
@@ -44,6 +45,7 @@ function phaseForToolKind(kind?: string): string {
 
 export function Studio() {
   const t = useStrings();
+  const navigate = useNavigate();
   const setHydrated = useStudio((s) => s.setHydrated);
   const settings = useStudio((s) => s.settings);
   const conversations = useStudio((s) => s.conversations);
@@ -88,6 +90,19 @@ export function Studio() {
     if (useStudio.persist.hasHydrated()) setHydrated();
     return unsub;
   }, [setHydrated]);
+
+  // URL selalu mencerminkan thread aktif: /thread/<id> atau / bila kosong.
+  useEffect(() => {
+    if (activeId) {
+      navigate({
+        to: "/thread/$threadId",
+        params: { threadId: activeId },
+        replace: true,
+      });
+    } else {
+      navigate({ to: "/", replace: true });
+    }
+  }, [activeId, navigate]);
 
   useEffect(() => {
     applyTheme(settings.theme);
