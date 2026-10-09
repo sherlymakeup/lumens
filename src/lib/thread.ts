@@ -94,12 +94,13 @@ export function isValidThreadRef(id: string): boolean {
 }
 
 /**
- * Working directory sandbox untuk sebuah thread: /workspace/<id>.
+ * Working directory sandbox untuk sebuah thread.
+ * $HOME dipakai karena sandbox jalan sebagai non-root ("/" tidak writable).
  * ID legacy (UUID) di-hash dulu agar aman sebagai nama direktori.
  */
 export function threadWorkdir(threadId: string): string {
   const short = isThreadId(threadId)
     ? threadId
     : `thr_${sha256Hex(`legacy:${threadId}`).slice(0, 16)}`;
-  return `/workspace/${short}`;
+  return `$HOME/workspace/${short}`;
 }

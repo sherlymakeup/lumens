@@ -73,6 +73,16 @@ export class SandboxSession {
     return `'${s.replace(/'/g, `'\\''`)}'`;
   }
 
+  /**
+   * Quote workdir untuk shell. Pakai double-quote agar $HOME tetap expand,
+   * tapi isi path (thr_<hex>) aman dari word-splitting.
+   */
+  private workdirQuote(): string {
+    const w = this.workdir ?? "";
+    if (!/^[\w$./-]+$/.test(w)) throw new Error("Workdir tidak valid.");
+    return `"${w}"`;
+  }
+
   private async createFresh(): Promise<SandboxLike> {
     const sb = await this.client.sandbox.create({
       template: this.template,
@@ -109,7 +119,7 @@ export class SandboxSession {
     // Fase B: pastikan workdir thread ada (sekali per inkarnasi sandbox).
     if (this.workdir && this.workdirReadyFor !== this.sb.sandboxId) {
       try {
-        await this.sb.commands.run(`mkdir -p -- ${this.shellQuote(this.workdir)}`, {
+        await this.sb.commands.run(`mkdir -p -- ${this.workdirQuote()}`, {
           timeoutMs: 30_000,
         });
       } catch {
@@ -132,7 +142,7 @@ export class SandboxSession {
     // Fase B: semua command jalan di workdir thread (isolasi per-thread).
     const wrapped =
       this.workdir && command.trim()
-        ? `cd ${this.shellQuote(this.workdir)} && ${command}`
+        ? `cd ${this.workdirQuote()} && ${command}`
         : command;
     const first = await this.ensure();
     try {

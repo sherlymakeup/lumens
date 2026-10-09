@@ -56,10 +56,10 @@ test("isValidThreadRef: terima baru atau legacy", () => {
 });
 
 test("threadWorkdir: /workspace/<id-pendek>", () => {
-  assert.equal(threadWorkdir("thr_0123456789abcdef"), "/workspace/thr_0123456789abcdef");
+  assert.equal(threadWorkdir("thr_0123456789abcdef"), "$HOME/workspace/thr_0123456789abcdef");
   // legacy UUID di-hash agar aman sebagai nama direktori
   const w = threadWorkdir("550e8400-e29b-41d4-a716-446655440000");
-  assert.match(w, /^\/workspace\/thr_[0-9a-f]{16}$/);
+  assert.match(w, /^\$HOME\/workspace\/thr_[0-9a-f]{16}$/);
   // deterministik untuk ID yang sama
   assert.equal(
     threadWorkdir("550e8400-e29b-41d4-a716-446655440000"),
@@ -104,7 +104,7 @@ test("getThread: row valid dinormalisasi", async () => {
       id: "thr_0123456789abcdef",
       parent_id: null,
       sandbox_id: "sb_123",
-      workdir: "/workspace/thr_0123456789abcdef",
+      workdir: "$HOME/workspace/thr_0123456789abcdef",
       created_at: "2026-10-09T00:00:00Z",
       last_active: "2026-10-09T00:00:00Z",
     },
@@ -113,7 +113,7 @@ test("getThread: row valid dinormalisasi", async () => {
     const r = await getThread(env, "thr_0123456789abcdef");
     assert.equal(r.ok, true);
     assert.equal(r.thread?.sandbox_id, "sb_123");
-    assert.equal(r.thread?.workdir, "/workspace/thr_0123456789abcdef");
+    assert.equal(r.thread?.workdir, "$HOME/workspace/thr_0123456789abcdef");
   } finally {
     globalThis.fetch = orig;
   }
@@ -123,7 +123,7 @@ test("upsertThread: tanpa env → skipped, ID invalid → gagal", async () => {
   const { upsertThread } = await import("../src/lib/agent-threads-db.ts");
   const r1 = await upsertThread(undefined, {
     id: "thr_0123456789abcdef",
-    workdir: "/workspace/thr_0123456789abcdef",
+    workdir: "$HOME/workspace/thr_0123456789abcdef",
   });
   assert.equal(r1.skipped, true);
   const r2 = await upsertThread({ url: "https://x.supabase.co", key: "k" }, {

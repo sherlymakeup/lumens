@@ -129,9 +129,9 @@ test("run() does not retry ordinary command failures", async () => {
 test("workdir: run() wraps command dengan cd", async () => {
   const boxes = {};
   const client = fakeClient(boxes);
-  const s = new SandboxSession(client, "tmpl", Date.now, undefined, "/workspace/thr_abc123");
+  const s = new SandboxSession(client, "tmpl", Date.now, undefined, "$HOME/workspace/thr_abc123");
   const r = await s.run("pwd", 5000);
-  assert.match(r.stdout, /^out:cd '\/workspace\/thr_abc123' && pwd$/);
+  assert.match(r.stdout, /^out:cd "\$HOME\/workspace\/thr_abc123" && pwd$/);
 });
 
 test("workdir: mkdir -p dijalankan sekali per sandbox", async () => {
@@ -144,7 +144,7 @@ test("workdir: mkdir -p dijalankan sekali per sandbox", async () => {
   };
   const boxes = { w1: sb };
   const client = fakeClient(boxes);
-  const s = new SandboxSession(client, "tmpl", Date.now, "w1", "/workspace/thr_abc123");
+  const s = new SandboxSession(client, "tmpl", Date.now, "w1", "$HOME/workspace/thr_abc123");
   await s.run("echo a", 5000);
   await s.run("echo b", 5000);
   const mkdirs = seen.filter((c) => c.startsWith("mkdir -p"));
