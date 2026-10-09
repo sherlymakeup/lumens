@@ -38,7 +38,7 @@ import {
   touchThread,
   upsertThread,
 } from "@/lib/agent-threads-db.ts";
-import { isValidThreadRef, threadWorkdir } from "@/lib/thread.ts";
+import { isValidThreadRef, threadWorkdir, normalizeWorkdirPaths } from "@/lib/thread.ts";
 import { runSubagent } from "@/lib/agent-subagent.ts";
 
 const Message = z.object({
@@ -108,6 +108,8 @@ Rules:
 - When the user asks you to compute, inspect, create, run, or verify something with the computer, USE sandbox_exec — don't just describe what to do.
 - Long commands need a generous timeoutMs: installs/downloads/builds can take minutes — set 180000-300000 for those. If a command times out, retry with a bigger timeoutMs or split the work into smaller steps.
 - The sandbox auto-refreshes before Novita's 1-hour limit; if you see a note that it was replaced, files from the old session are gone — recreate what you need and continue the plan.
+- If the user asks to resend a file and it's missing (sandbox was replaced): DO NOT give up. Recreate the file from the conversation history — the commands you used to build it are in your previous tool calls. Rebuild it, verify it exists with ls, then deliver it via read_file.
+- Paths: your working directory is ~/workspace/<thread> — every sandbox_exec starts there. Use RELATIVE paths (e.g. "netcheck/netcheck.zip") or the full ~/workspace/<thread>/... path. Never use ~/workspace/<something-else>.
 - When the user asks you to draw/create/make an image or picture, USE generate_image with a detailed English prompt.
 - When the user asks about news, prices, schedules, or recent events, USE web_search first.
 - web_search returns short snippets with URLs. When a snippet isn't enough,
@@ -682,6 +684,8 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
 
                   if (tc.name === "sandbox_exec") {
                     let command = String(args.command ?? "").slice(0, 2000);
+                    // Normalisasi path: cegah agent nyasar ke luar workdir thread.
+                    command = normalizeWorkdirPaths(command, threadId);
                     let timeoutMs = DEFAULT_COMMAND_TIMEOUT_MS;
                     if (args.timeoutMs) {
                       timeoutMs = clamp(
@@ -802,7 +806,9 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                     send({ type: "tool_result", output, exitCode: 0 });
                     convo.push({ role: "tool", tool_call_id: tc.id, content: output });
                   } else if (tc.name === "read_file") {
-                    const path = String(args.path ?? "").slice(0, 500);
+                    const rawPath = String(args.path ?? "").slice(0, 500);
+                    // Normalisasi path yang sama agar konsisten dengan sandbox_exec.
+                    const path = normalizeWorkdirPaths(rawPath, threadId);
                     send({ type: "tool_call", kind: "file", command: path });
                     const execFn = async (cmd: string) => {
                       const r = await session.run(cmd, DEFAULT_COMMAND_TIMEOUT_MS);

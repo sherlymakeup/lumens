@@ -104,3 +104,21 @@ export function threadWorkdir(threadId: string): string {
     : `thr_${sha256Hex(`legacy:${threadId}`).slice(0, 16)}`;
   return `$HOME/workspace/${short}`;
 }
+
+/** Nama direktori workdir saja (tanpa $HOME/workspace/). */
+export function threadDirName(threadId: string): string {
+  const workdir = threadWorkdir(threadId);
+  return workdir.split("/").pop() ?? threadId;
+}
+
+/** Normalisasi path di command: ~/workspace/xxx atau $HOME/workspace/xxx
+ *  yang tidak diawali thread dir -> diarahkan ke ~/workspace/<thread>/xxx.
+ *  Mencegah agent nyasar bikin file di luar workdir thread. */
+export function normalizeWorkdirPaths(command: string, threadId: string | undefined): string {
+  if (!threadId) return command;
+  const dir = threadDirName(threadId);
+  const escaped = dir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Match ~/workspace/ atau $HOME/workspace/ yang TIDAK diikuti <thread>/
+  const pattern = new RegExp(`(~\\/workspace\\/|\\$HOME\\/workspace\\/)(?!${escaped}(\\/|$))`, "g");
+  return command.replace(pattern, `$1${dir}/`);
+}
