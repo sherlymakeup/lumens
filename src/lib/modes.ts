@@ -293,6 +293,11 @@ export const MODE_BY_ID: Record<ModeId, StudioMode> = Object.fromEntries(
   MODES.map((mode) => [mode.id, mode]),
 ) as Record<ModeId, StudioMode>;
 
+/** Mode yang tampil di pemilih mode — "write" disembunyikan dari navigasi
+ *  (duplikasi dengan Agent), tapi definisinya tetap ada untuk kompatibilitas
+ *  percakapan lama. */
+export const VISIBLE_MODES: StudioMode[] = MODES.filter((mode) => mode.id !== "write");
+
 export function defaultExtras(modeId: ModeId): Record<string, string> {
   const extras: Record<string, string> = {};
   for (const field of MODE_BY_ID[modeId].extras) {

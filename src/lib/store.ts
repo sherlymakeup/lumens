@@ -184,7 +184,7 @@ export const useStudio = create<StudioState>()(
             if (item.id !== conversationId) return item;
             const title =
               item.title === "Untitled" && message.role === "user"
-                ? truncate(message.content || MODE_BY_ID[item.modeId].label, 42)
+                ? truncate(message.content || "Untitled", 42)
                 : item.title;
             return {
               ...item,

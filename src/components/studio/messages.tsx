@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/lib/markdown";
-import { useStrings } from "@/lib/i18n";
+import { useStrings, type StringKey } from "@/lib/i18n";
 import { useStudio } from "@/lib/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -53,11 +53,13 @@ export function MessageList({
   streamingId,
   showMarkdown,
   onRegenerate,
+  phase,
 }: {
   messages: ChatMessage[];
   streamingId: string | null;
   showMarkdown: boolean;
   onRegenerate: () => void;
+  phase?: string | null;
 }) {
   const t = useStrings();
   const activeId = useStudio((s) => s.activeId);
@@ -125,7 +127,9 @@ export function MessageList({
             </div>
             {empty ? (
               <div className="space-y-3" aria-live="polite">
-                <p className="shimmer-text text-sm font-medium">Thinking…</p>
+                <p className="shimmer-text text-sm font-medium">
+                  {t[(phase ?? "status.thinking") as StringKey]}
+                </p>
                 <MessageSkeleton />
               </div>
             ) : showMarkdown && !message.error ? (

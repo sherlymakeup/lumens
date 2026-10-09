@@ -13,6 +13,7 @@ import { MODE_BY_ID } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
 import { useStrings } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { HistoryPopover } from "./history-popover";
 
 function HealthChip() {
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
@@ -57,6 +58,8 @@ function HealthChip() {
 
 export function Header({ models }: { models: string[] }) {
   const modeId = useStudio((s) => s.modeId);
+  const activeId = useStudio((s) => s.activeId);
+  const conversations = useStudio((s) => s.conversations);
   const settings = useStudio((s) => s.settings);
   const setSettings = useStudio((s) => s.setSettings);
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
@@ -65,6 +68,10 @@ export function Header({ models }: { models: string[] }) {
   const t = useStrings();
   const options = models;
   const modelValue = options.includes(settings.model) ? settings.model : undefined;
+  // Judul sesi chat — auto-generated dari konteks awal (store.addMessage).
+  const activeConv = conversations.find((c) => c.id === activeId);
+  const sessionTitle =
+    activeConv && activeConv.title !== "Untitled" ? activeConv.title : t["header.newTitle"];
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
@@ -78,7 +85,7 @@ export function Header({ models }: { models: string[] }) {
         <Menu className="size-5" />
       </Button>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{t[mode.label]}</div>
+        <div className="truncate text-sm font-medium">{sessionTitle}</div>
         <div className="truncate text-[11px] text-muted-foreground">{t[mode.hint]}</div>
       </div>
       <HealthChip />
@@ -103,6 +110,7 @@ export function Header({ models }: { models: string[] }) {
           {settings.model || t["header.noModels"]}
         </span>
       )}
+      <HistoryPopover />
       <Button
         variant="outline"
         size="icon"

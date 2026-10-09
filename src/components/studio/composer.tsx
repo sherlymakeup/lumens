@@ -10,10 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useStrings } from "@/lib/i18n";
-import { MODE_BY_ID } from "@/lib/modes";
+import { MODE_BY_ID, MODES, VISIBLE_MODES } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
 import type { ChatAttachment, ModeId } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { MODE_ICONS } from "./icons";
 
 const MAX_CLIENT_BYTES = 10 * 1024 * 1024;
 
@@ -52,7 +53,10 @@ export function Composer({
   const model = useStudio((s) => s.settings.model);
   const agentMode = useStudio((s) => s.settings.agentMode);
   const setSettings = useStudio((s) => s.setSettings);
+  const setMode = useStudio((s) => s.setMode);
   const t = useStrings();
+  // "write" disembunyikan dari pilihan — kecuali percakapan aktif memakainya.
+  const modeChoices = VISIBLE_MODES.some((m) => m.id === modeId) ? VISIBLE_MODES : MODES;
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focus, setFocus] = useState(false);
 
@@ -166,32 +170,53 @@ export function Composer({
           "data-[focus=true]:border-primary/60 data-[focus=true]:ring-4 data-[focus=true]:ring-primary/15",
         )}
       >
-        {mode.extras.length > 0 ? (
-          <div className="flex flex-wrap gap-2 px-3 pt-2.5">
-            {mode.extras.map((field) => (
-              <label key={field.key} className="flex items-center gap-2">
-                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {t[field.label]}
-                </span>
-                <Select
-                  value={extras[field.key] ?? field.defaultValue}
-                  onValueChange={(next) => onExtras({ ...extras, [field.key]: next })}
-                >
-                  <SelectTrigger className="h-8 w-auto min-w-28 gap-2 bg-transparent px-2.5 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {field.options.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {t[option.label]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            ))}
-          </div>
-        ) : null}
+        <div className="flex flex-wrap gap-2 px-3 pt-2.5">
+          <label className="flex items-center gap-2">
+            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              {t["cmp.mode"]}
+            </span>
+            <Select value={modeId} onValueChange={(v) => setMode(v as ModeId)}>
+              <SelectTrigger className="h-8 w-auto min-w-28 gap-2 bg-transparent px-2.5 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {modeChoices.map((m) => {
+                  const Icon = MODE_ICONS[m.id];
+                  return (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-center gap-2">
+                        <Icon className="size-3.5 shrink-0" />
+                        {t[m.label]}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </label>
+          {mode.extras.map((field) => (
+            <label key={field.key} className="flex items-center gap-2">
+              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t[field.label]}
+              </span>
+              <Select
+                value={extras[field.key] ?? field.defaultValue}
+                onValueChange={(next) => onExtras({ ...extras, [field.key]: next })}
+              >
+                <SelectTrigger className="h-8 w-auto min-w-28 gap-2 bg-transparent px-2.5 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {field.options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {t[option.label]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          ))}
+        </div>
 
         {attachments.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">

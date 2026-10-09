@@ -16,6 +16,26 @@ import { SettingsPanel } from "./settings";
 import { Sidebar } from "./sidebar";
 import { MobileSidebar } from "./mobile-sidebar";
 
+/** Petakan tool kind dari SSE agent ke label status (key i18n "status.*"). */
+function phaseForToolKind(kind?: string): string {
+  switch (kind) {
+    case "search":
+      return "status.search";
+    case "image":
+      return "status.image";
+    case "memory":
+      return "status.memory";
+    case "file":
+      return "status.file";
+    case "subagent":
+      return "status.subagent";
+    case "sandbox":
+      return "status.sandbox";
+    default:
+      return "status.processing";
+  }
+}
+
 export function Studio() {
   const t = useStrings();
   const setHydrated = useStudio((s) => s.setHydrated);
@@ -36,6 +56,8 @@ export function Studio() {
   const [draft, setDraft] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [thinking, setThinking] = useState(false);
+  // Fase status dinamis: label aktivitas agent saat ini (key i18n "status.*").
+  const [agentPhase, setAgentPhase] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [uploadSandboxId, setUploadSandboxId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -160,9 +182,11 @@ export function Studio() {
         signal: controller.signal,
         onText: (delta) => {
           assembled += delta;
+          setAgentPhase("status.writing");
           patchMessage(conversationId, assistantId, { content: assembled });
         },
         onToolCall: (command, kind) => {
+          setAgentPhase(phaseForToolKind(kind));
           const current = useStudio
             .getState()
             .conversations.find((item) => item.id === conversationId)
@@ -192,14 +216,17 @@ export function Studio() {
             calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode, images, files };
           }
           patchMessage(conversationId, assistantId, { toolCalls: calls });
+          setAgentPhase("status.processing");
         },
         onPlan: (steps) => {
           patchMessage(conversationId, assistantId, { plan: steps });
+          setAgentPhase("status.plan");
         },
         onDone: (sandboxId) => {
           if (sandboxId) setSandboxId(conversationId, sandboxId);
           patchMessage(conversationId, assistantId, { elapsedMs: Date.now() - startedAt });
           setStreamingId(null);
+          setAgentPhase(null);
           abortRef.current = null;
         },
         onError: (message) => {
@@ -209,6 +236,7 @@ export function Studio() {
             elapsedMs: Date.now() - startedAt,
           });
           setStreamingId(null);
+          setAgentPhase(null);
           abortRef.current = null;
         },
       },
@@ -257,6 +285,7 @@ export function Studio() {
     addMessage(id, assistant);
     setStreamingId(assistant.id);
     setThinking(false);
+    setAgentPhase("status.thinking");
     setDraft("");
     setAttachments([]);
     setUploadSandboxId(null);
@@ -300,16 +329,21 @@ export function Studio() {
       },
       {
         signal: controller.signal,
-        onThinking: () => setThinking(true),
+        onThinking: () => {
+          setThinking(true);
+          setAgentPhase("status.thinking");
+        },
         onDelta: (chunk) => {
           assembled += chunk;
           setThinking(false);
+          setAgentPhase("status.writing");
           patchMessage(id, assistant.id, { content: assembled });
         },
         onDone: () => {
           patchMessage(id, assistant.id, { elapsedMs: Date.now() - startedAt });
           setStreamingId(null);
           setThinking(false);
+          setAgentPhase(null);
           abortRef.current = null;
         },
         onError: (message) => {
@@ -320,6 +354,7 @@ export function Studio() {
           });
           setStreamingId(null);
           setThinking(false);
+          setAgentPhase(null);
           abortRef.current = null;
         },
       },
@@ -363,6 +398,7 @@ export function Studio() {
               streamingId={streamingId}
               showMarkdown={settings.showMarkdown}
               onRegenerate={regenerate}
+              phase={streamingId ? agentPhase : null}
             />
           )}
         </div>
