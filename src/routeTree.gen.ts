@@ -15,14 +15,17 @@ import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as TriggersRouteImport } from './routes/triggers'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiConnectionsRouteImport } from './routes/api/connections'
 import { Route as ApiConversationsRouteImport } from './routes/api/conversations'
+import { Route as ApiCronRouteImport } from './routes/api/cron'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiImagesRouteImport } from './routes/api/images'
 import { Route as ApiModelsRouteImport } from './routes/api/models'
 import { Route as ApiModelsTestRouteImport } from './routes/api/models-test'
+import { Route as ApiTriggersRouteImport } from './routes/api/triggers'
 import { Route as EnginesCodeRouteImport } from './routes/engines/code'
 import { Route as EnginesContentRouteImport } from './routes/engines/content'
 import { Route as EnginesDesignRouteImport } from './routes/engines/design'
@@ -31,6 +34,7 @@ import { Route as ThreadThreadIdRouteImport } from './routes/thread.$threadId'
 import { Route as ApiAgentUploadRouteImport } from './routes/api/agent/upload'
 import { Route as ApiConnectionsIdRouteImport } from './routes/api/connections.$id'
 import { Route as ApiSandboxExecuteRouteImport } from './routes/api/sandbox/execute'
+import { Route as ApiWebhookIdRouteImport } from './routes/api/webhook.$id'
 import { Route as ApiConnectionsIdTestRouteImport } from './routes/api/connections.$id.test'
 
 const IndexRoute = IndexRouteImport.update({
@@ -63,6 +67,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TriggersRoute = TriggersRouteImport.update({
+  id: '/triggers',
+  path: '/triggers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentRoute = ApiAgentRouteImport.update({
   id: '/api/agent',
   path: '/api/agent',
@@ -76,6 +85,11 @@ const ApiConnectionsRoute = ApiConnectionsRouteImport.update({
 const ApiConversationsRoute = ApiConversationsRouteImport.update({
   id: '/api/conversations',
   path: '/api/conversations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronRoute = ApiCronRouteImport.update({
+  id: '/api/cron',
+  path: '/api/cron',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -101,6 +115,11 @@ const ApiModelsRoute = ApiModelsRouteImport.update({
 const ApiModelsTestRoute = ApiModelsTestRouteImport.update({
   id: '/api/models-test',
   path: '/api/models-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTriggersRoute = ApiTriggersRouteImport.update({
+  id: '/api/triggers',
+  path: '/api/triggers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EnginesCodeRoute = EnginesCodeRouteImport.update({
@@ -143,6 +162,11 @@ const ApiSandboxExecuteRoute = ApiSandboxExecuteRouteImport.update({
   path: '/api/sandbox/execute',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhookIdRoute = ApiWebhookIdRouteImport.update({
+  id: '/api/webhook/$id',
+  path: '/api/webhook/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiConnectionsIdTestRoute = ApiConnectionsIdTestRouteImport.update({
   id: '/test',
   path: '/test',
@@ -156,14 +180,17 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
+  '/triggers': typeof TriggersRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/connections': typeof ApiConnectionsRouteWithChildren
   '/api/conversations': typeof ApiConversationsRoute
+  '/api/cron': typeof ApiCronRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
   '/api/models-test': typeof ApiModelsTestRoute
+  '/api/triggers': typeof ApiTriggersRoute
   '/engines/code': typeof EnginesCodeRoute
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
@@ -172,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
+  '/api/webhook/$id': typeof ApiWebhookIdRoute
   '/api/connections/$id/test': typeof ApiConnectionsIdTestRoute
 }
 export interface FileRoutesByTo {
@@ -181,14 +209,17 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
+  '/triggers': typeof TriggersRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/connections': typeof ApiConnectionsRouteWithChildren
   '/api/conversations': typeof ApiConversationsRoute
+  '/api/cron': typeof ApiCronRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
   '/api/models-test': typeof ApiModelsTestRoute
+  '/api/triggers': typeof ApiTriggersRoute
   '/engines/code': typeof EnginesCodeRoute
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
@@ -197,6 +228,7 @@ export interface FileRoutesByTo {
   '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
+  '/api/webhook/$id': typeof ApiWebhookIdRoute
   '/api/connections/$id/test': typeof ApiConnectionsIdTestRoute
 }
 export interface FileRoutesById {
@@ -207,14 +239,17 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
+  '/triggers': typeof TriggersRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/connections': typeof ApiConnectionsRouteWithChildren
   '/api/conversations': typeof ApiConversationsRoute
+  '/api/cron': typeof ApiCronRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
   '/api/models': typeof ApiModelsRoute
   '/api/models-test': typeof ApiModelsTestRoute
+  '/api/triggers': typeof ApiTriggersRoute
   '/engines/code': typeof EnginesCodeRoute
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
@@ -223,6 +258,7 @@ export interface FileRoutesById {
   '/api/agent/upload': typeof ApiAgentUploadRoute
   '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
+  '/api/webhook/$id': typeof ApiWebhookIdRoute
   '/api/connections/$id/test': typeof ApiConnectionsIdTestRoute
 }
 export interface FileRouteTypes {
@@ -234,14 +270,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/projects'
+    | '/triggers'
     | '/api/agent'
     | '/api/connections'
     | '/api/conversations'
+    | '/api/cron'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
     | '/api/models'
     | '/api/models-test'
+    | '/api/triggers'
     | '/engines/code'
     | '/engines/content'
     | '/engines/design'
@@ -250,6 +289,7 @@ export interface FileRouteTypes {
     | '/api/agent/upload'
     | '/api/connections/$id'
     | '/api/sandbox/execute'
+    | '/api/webhook/$id'
     | '/api/connections/$id/test'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -259,14 +299,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/projects'
+    | '/triggers'
     | '/api/agent'
     | '/api/connections'
     | '/api/conversations'
+    | '/api/cron'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
     | '/api/models'
     | '/api/models-test'
+    | '/api/triggers'
     | '/engines/code'
     | '/engines/content'
     | '/engines/design'
@@ -275,6 +318,7 @@ export interface FileRouteTypes {
     | '/api/agent/upload'
     | '/api/connections/$id'
     | '/api/sandbox/execute'
+    | '/api/webhook/$id'
     | '/api/connections/$id/test'
   id:
     | '__root__'
@@ -284,14 +328,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/projects'
+    | '/triggers'
     | '/api/agent'
     | '/api/connections'
     | '/api/conversations'
+    | '/api/cron'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
     | '/api/models'
     | '/api/models-test'
+    | '/api/triggers'
     | '/engines/code'
     | '/engines/content'
     | '/engines/design'
@@ -300,6 +347,7 @@ export interface FileRouteTypes {
     | '/api/agent/upload'
     | '/api/connections/$id'
     | '/api/sandbox/execute'
+    | '/api/webhook/$id'
     | '/api/connections/$id/test'
   fileRoutesById: FileRoutesById
 }
@@ -310,20 +358,24 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   ProjectsRoute: typeof ProjectsRoute
+  TriggersRoute: typeof TriggersRoute
   ApiAgentRoute: typeof ApiAgentRouteWithChildren
   ApiConnectionsRoute: typeof ApiConnectionsRouteWithChildren
   ApiConversationsRoute: typeof ApiConversationsRoute
+  ApiCronRoute: typeof ApiCronRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImagesRoute: typeof ApiImagesRoute
   ApiModelsRoute: typeof ApiModelsRoute
   ApiModelsTestRoute: typeof ApiModelsTestRoute
+  ApiTriggersRoute: typeof ApiTriggersRoute
   EnginesCodeRoute: typeof EnginesCodeRoute
   EnginesContentRoute: typeof EnginesContentRoute
   EnginesDesignRoute: typeof EnginesDesignRoute
   EnginesPrototypeRoute: typeof EnginesPrototypeRoute
   ThreadThreadIdRoute: typeof ThreadThreadIdRoute
   ApiSandboxExecuteRoute: typeof ApiSandboxExecuteRoute
+  ApiWebhookIdRoute: typeof ApiWebhookIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -370,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/triggers': {
+      id: '/triggers'
+      path: '/triggers'
+      fullPath: '/triggers'
+      preLoaderRoute: typeof TriggersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent': {
       id: '/api/agent'
       path: '/api/agent'
@@ -389,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/api/conversations'
       fullPath: '/api/conversations'
       preLoaderRoute: typeof ApiConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron': {
+      id: '/api/cron'
+      path: '/api/cron'
+      fullPath: '/api/cron'
+      preLoaderRoute: typeof ApiCronRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -424,6 +490,13 @@ declare module '@tanstack/react-router' {
       path: '/api/models-test'
       fullPath: '/api/models-test'
       preLoaderRoute: typeof ApiModelsTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/triggers': {
+      id: '/api/triggers'
+      path: '/api/triggers'
+      fullPath: '/api/triggers'
+      preLoaderRoute: typeof ApiTriggersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/engines/code': {
@@ -482,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSandboxExecuteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhook/$id': {
+      id: '/api/webhook/$id'
+      path: '/api/webhook/$id'
+      fullPath: '/api/webhook/$id'
+      preLoaderRoute: typeof ApiWebhookIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/connections/$id/test': {
       id: '/api/connections/$id/test'
       path: '/test'
@@ -534,20 +614,24 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   ProjectsRoute: ProjectsRoute,
+  TriggersRoute: TriggersRoute,
   ApiAgentRoute: ApiAgentRouteWithChildren,
   ApiConnectionsRoute: ApiConnectionsRouteWithChildren,
   ApiConversationsRoute: ApiConversationsRoute,
+  ApiCronRoute: ApiCronRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImagesRoute: ApiImagesRoute,
   ApiModelsRoute: ApiModelsRoute,
   ApiModelsTestRoute: ApiModelsTestRoute,
+  ApiTriggersRoute: ApiTriggersRoute,
   EnginesCodeRoute: EnginesCodeRoute,
   EnginesContentRoute: EnginesContentRoute,
   EnginesDesignRoute: EnginesDesignRoute,
   EnginesPrototypeRoute: EnginesPrototypeRoute,
   ThreadThreadIdRoute: ThreadThreadIdRoute,
   ApiSandboxExecuteRoute: ApiSandboxExecuteRoute,
+  ApiWebhookIdRoute: ApiWebhookIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

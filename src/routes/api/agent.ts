@@ -4,6 +4,7 @@ import { Novita } from "novita-sandbox";
 import { chatCompletionsUrl } from "@/lib/safe-url";
 import { runImageGeneration, runWebRead, runWebSearch } from "@/lib/agent-tools";
 import { deleteMemory, memoryEnv, saveMemory, searchMemories } from "@/lib/agent-memory";
+import { runLearningLoop } from "@/lib/agent-learning.ts";
 import { fetchSandboxFile } from "@/lib/agent-files";
 import {
   DEFAULT_COMMAND_TIMEOUT_MS,
@@ -1055,6 +1056,28 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                 }
               }
               send({ type: "done", sandboxId: session.sandboxId });
+              // P2: Learning loop — ekstrak learnings dari percakapan, simpan ke memory.
+              // Fire-and-forget: tidak block respons ke user.
+              try {
+                const learningMessages = convo.map((m) => ({
+                  role: m.role as string,
+                  content: typeof m.content === "string" ? m.content : "",
+                  toolCalls: ((m as { tool_calls?: { function: { name: string } }[] }).tool_calls ?? []).map((tc) => ({ name: tc.function.name })),
+                }));
+                void runLearningLoop(
+                  learningMessages,
+                  async (prompt: string) => {
+                    const out = await callModel(
+                      [{ role: "user", content: prompt }],
+                      false,
+                    );
+                    return out.content;
+                  },
+                  memoryEnv(),
+                ).catch(() => {});
+              } catch {
+                /* learning loop best-effort */
+              }
             } catch (error) {
               if (!request.signal.aborted) {
                 send({
