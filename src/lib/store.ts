@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { DEFAULT_ENGINE_MODELS, DEFAULT_SETTINGS } from "./types";
 import { truncate, uid } from "./utils";
+import { newThreadId } from "./thread";
 
 type StudioState = {
   hydrated: boolean;
@@ -105,7 +106,7 @@ export const useStudio = create<StudioState>()(
         const mode = modeId ?? get().modeId;
         const now = Date.now();
         const conversation: Conversation = {
-          id: uid(),
+          id: newThreadId(),
           modeId: mode,
           title: "Untitled",
           extras: defaultExtras(mode),
@@ -130,7 +131,7 @@ export const useStudio = create<StudioState>()(
         const suffix = get().settings.lang === "id" ? " (cabang)" : " (branch)";
         const forked: Conversation = {
           ...source,
-          id: uid(),
+          id: newThreadId(),
           title: `${source.title}${suffix}`,
           messages: source.messages.slice(0, index + 1),
           createdAt: now,

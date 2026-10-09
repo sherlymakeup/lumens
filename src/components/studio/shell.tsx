@@ -145,6 +145,7 @@ export function Studio() {
       {
         messages: payloadMessages,
         model: state.settings.model,
+        threadId: conversationId,
         sandboxId: conv?.sandboxId,
         attachments: atts.length > 0 ? atts : undefined,
         params: {

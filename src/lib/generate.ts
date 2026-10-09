@@ -119,6 +119,7 @@ export async function generateAgent(
   request: {
     messages: { role: "system" | "user" | "assistant"; content: string }[];
     model: string;
+    threadId?: string;
     sandboxId?: string;
     attachments?: { name: string; path: string; mime: string; size: number }[];
     params: {
@@ -138,6 +139,7 @@ export async function generateAgent(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: request.messages,
+        threadId: request.threadId,
         sandboxId: request.sandboxId,
         attachments: request.attachments,
         connection: { provider: "custom", model: request.model },

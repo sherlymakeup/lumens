@@ -32,6 +32,13 @@ import {
   connectionEnv,
   listEnabledConnectionsFull,
 } from "@/lib/agent-connections-db.ts";
+import {
+  getThread,
+  threadEnv,
+  touchThread,
+  upsertThread,
+} from "@/lib/agent-threads-db.ts";
+import { isValidThreadRef, threadWorkdir } from "@/lib/thread.ts";
 
 const Message = z.object({
   role: z.enum(["system", "user", "assistant"]),
@@ -48,6 +55,7 @@ const Attachment = z.object({
 const Body = z.object({
   messages: z.array(Message).min(1).max(24),
   sandboxId: z.string().min(1).max(120).optional(),
+  threadId: z.string().min(1).max(80).optional(),
   attachments: z.array(Attachment).max(5).optional(),
   connection: z.object({
     provider: z.enum(["custom"]),
@@ -340,6 +348,18 @@ export const Route = createFileRoute("/api/agent")({
         }
         const { messages, connection, params, attachments } = parsed.data;
         let sandboxId: string | undefined = parsed.data.sandboxId;
+
+        // Thread registry (Fase A): resolve sandbox server-side dari threadId.
+        // Prioritas: registry > sandboxId kiriman client (fallback stateless).
+        const rawThreadId = parsed.data.threadId;
+        const threadId = rawThreadId && isValidThreadRef(rawThreadId) ? rawThreadId : undefined;
+        const tEnv = threadEnv();
+        if (threadId && tEnv) {
+          const got = await getThread(tEnv, threadId);
+          if (got.ok && got.thread?.sandbox_id) {
+            sandboxId = got.thread.sandbox_id;
+          }
+        }
 
         const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
         const base = process.env.OPENAI_BASE_URL?.trim() ?? "";
@@ -765,6 +785,19 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
               for (let p = 0; p < finalText.length; p += CHUNK) {
                 if (request.signal.aborted) break;
                 send({ type: "text", delta: finalText.slice(p, p + CHUNK) });
+              }
+              // Persist thread binding: sandboxId ↔ threadId di registry.
+              // Best-effort — agent tetap jalan walau Supabase down.
+              if (threadId && tEnv) {
+                if (session.sandboxId) {
+                  await upsertThread(tEnv, {
+                    id: threadId,
+                    sandbox_id: session.sandboxId,
+                    workdir: threadWorkdir(threadId),
+                  });
+                } else {
+                  await touchThread(tEnv, threadId);
+                }
               }
               send({ type: "done", sandboxId: session.sandboxId });
             } catch (error) {
