@@ -30,6 +30,7 @@ export function Composer({
   attachments,
   onAttachments,
   sandboxId,
+  threadId,
   onUploadSandboxId,
 }: {
   modeId: ModeId;
@@ -44,6 +45,7 @@ export function Composer({
   attachments: ChatAttachment[];
   onAttachments: (next: ChatAttachment[]) => void;
   sandboxId?: string;
+  threadId?: string;
   onUploadSandboxId?: (sandboxId: string) => void;
 }) {
   const mode = MODE_BY_ID[modeId];
@@ -104,6 +106,7 @@ export function Composer({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               sandboxId,
+              threadId,
               name: file.name,
               mime: file.type || "application/octet-stream",
               base64,

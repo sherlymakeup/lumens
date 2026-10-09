@@ -381,6 +381,7 @@ export function Studio() {
           attachments={attachments}
           onAttachments={setAttachments}
           sandboxId={conversation?.sandboxId}
+          threadId={conversation?.id}
           onUploadSandboxId={setUploadSandboxId}
         />
       </div>

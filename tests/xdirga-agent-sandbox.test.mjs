@@ -125,3 +125,37 @@ test("run() does not retry ordinary command failures", async () => {
   assert.equal(r.exitCode, 1);
   assert.equal(client.created, 0); // no recreate
 });
+
+test("workdir: run() wraps command dengan cd", async () => {
+  const boxes = {};
+  const client = fakeClient(boxes);
+  const s = new SandboxSession(client, "tmpl", Date.now, undefined, "/workspace/thr_abc123");
+  const r = await s.run("pwd", 5000);
+  assert.match(r.stdout, /^out:cd '\/workspace\/thr_abc123' && pwd$/);
+});
+
+test("workdir: mkdir -p dijalankan sekali per sandbox", async () => {
+  const seen = [];
+  const sb = fakeSandbox("w1");
+  const origRun = sb.commands.run;
+  sb.commands.run = async (cmd, opts) => {
+    seen.push(cmd);
+    return origRun(cmd, opts);
+  };
+  const boxes = { w1: sb };
+  const client = fakeClient(boxes);
+  const s = new SandboxSession(client, "tmpl", Date.now, "w1", "/workspace/thr_abc123");
+  await s.run("echo a", 5000);
+  await s.run("echo b", 5000);
+  const mkdirs = seen.filter((c) => c.startsWith("mkdir -p"));
+  assert.equal(mkdirs.length, 1);
+  assert.match(mkdirs[0], /\/workspace\/thr_abc123/);
+});
+
+test("tanpa workdir: command tidak di-wrap", async () => {
+  const boxes = {};
+  const client = fakeClient(boxes);
+  const s = new SandboxSession(client, "tmpl");
+  const r = await s.run("pwd", 5000);
+  assert.equal(r.stdout, "out:pwd");
+});

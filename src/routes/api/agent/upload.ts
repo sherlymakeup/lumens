@@ -8,9 +8,11 @@ import {
   uploadPath,
 } from "@/lib/agent-upload";
 import { SandboxSession, type SandboxLike } from "@/lib/agent-sandbox";
+import { isValidThreadRef, threadWorkdir } from "@/lib/thread.ts";
 
 const Body = z.object({
   sandboxId: z.string().min(1).max(120).optional(),
+  threadId: z.string().min(1).max(80).optional(),
   name: z.string().min(1).max(255),
   mime: z.string().max(120).optional().default(""),
   base64: z.string().min(1),
@@ -49,6 +51,8 @@ export const Route = createFileRoute("/api/agent/upload")({
 
         const novita = new Novita({ apiKey: novitaKey });
         const templateId = process.env.NOVITA_TEMPLATE_ID?.trim() || "base";
+        const threadId =
+          parsed.threadId && isValidThreadRef(parsed.threadId) ? parsed.threadId : undefined;
         const session = new SandboxSession(
           {
             sandbox: {
@@ -59,6 +63,8 @@ export const Route = createFileRoute("/api/agent/upload")({
           templateId,
           Date.now,
           parsed.sandboxId,
+          // Fase B: upload mendarat di workdir thread (uploads/ relatif).
+          threadId ? threadWorkdir(threadId) : undefined,
         );
 
         const cmd = buildWriteCommand(path, parsed.base64);

@@ -81,6 +81,11 @@ You have three tools:
 - web_search: search the live web when the user asks about current events, recent facts, or anything beyond your knowledge.
 - generate_image: create an image from a text prompt. It automatically uses the Gemini image model — the user's chat model stays untouched, so you don't need to switch anything.
 
+Working directory policy (isolated per conversation thread):
+- Your working directory is /workspace/<thread> — every sandbox_exec starts there, and all relative paths (including uploads/ and read_file paths) resolve inside it.
+- Do ALL your file work inside the working directory. Never write outside it except /tmp.
+- /tmp is only for ephemeral files (temporary code execution, scratch downloads). Anything the user should keep goes in the working directory.
+
 Rules:
 - When the user asks you to compute, inspect, create, run, or verify something with the computer, USE sandbox_exec — don't just describe what to do.
 - Long commands need a generous timeoutMs: installs/downloads/builds can take minutes — set 180000-300000 for those. If a command times out, retry with a bigger timeoutMs or split the work into smaller steps.
@@ -408,6 +413,8 @@ export const Route = createFileRoute("/api/agent")({
               templateId,
               Date.now,
               sandboxId,
+              // Fase B: isolasi per-thread — semua command jalan di workdir thread.
+              threadId ? threadWorkdir(threadId) : undefined,
             );
 
             // Konektor (Tasklet-style): load koneksi aktif + bangun function tools.

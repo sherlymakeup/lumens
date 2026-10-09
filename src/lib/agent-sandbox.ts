@@ -43,21 +43,34 @@ export class SandboxSession {
   private client: NovitaClientLike;
   private template: string;
   private now: () => number;
+  private workdir: string | undefined;
+  private workdirReadyFor: string | null = null;
 
   constructor(
     client: NovitaClientLike,
     template: string,
     now: () => number = Date.now,
     initialId?: string,
+    workdir?: string,
   ) {
     this.client = client;
     this.template = template;
     this.now = now;
     this.pendingId = initialId;
+    this.workdir = workdir;
   }
 
   get sandboxId(): string | undefined {
     return this.sb?.sandboxId ?? this.pendingId;
+  }
+
+  /** Workdir aktif (untuk prompt/diagnostik). */
+  get activeWorkdir(): string | undefined {
+    return this.workdir;
+  }
+
+  private shellQuote(s: string): string {
+    return `'${s.replace(/'/g, `'\\''`)}'`;
   }
 
   private async createFresh(): Promise<SandboxLike> {
@@ -93,6 +106,17 @@ export class SandboxSession {
     }
     // Refresh the idle timeout on every use (best effort).
     await this.sb.setTimeout(SANDBOX_IDLE_MS).catch(() => {});
+    // Fase B: pastikan workdir thread ada (sekali per inkarnasi sandbox).
+    if (this.workdir && this.workdirReadyFor !== this.sb.sandboxId) {
+      try {
+        await this.sb.commands.run(`mkdir -p -- ${this.shellQuote(this.workdir)}`, {
+          timeoutMs: 30_000,
+        });
+      } catch {
+        /* best-effort: run() tetap jalan, command akan gagal natural */
+      }
+      this.workdirReadyFor = this.sb.sandboxId;
+    }
     return { sb: this.sb, note };
   }
 
@@ -105,9 +129,14 @@ export class SandboxSession {
     command: string,
     timeoutMs: number,
   ): Promise<{ stdout: string; stderr: string; exitCode: number; note: string }> {
+    // Fase B: semua command jalan di workdir thread (isolasi per-thread).
+    const wrapped =
+      this.workdir && command.trim()
+        ? `cd ${this.shellQuote(this.workdir)} && ${command}`
+        : command;
     const first = await this.ensure();
     try {
-      const r = await first.sb.commands.run(command, { timeoutMs });
+      const r = await first.sb.commands.run(wrapped, { timeoutMs });
       return {
         stdout: r.stdout ?? "",
         stderr: r.stderr ?? "",
@@ -121,7 +150,7 @@ export class SandboxSession {
       this.sb = null;
       this.pendingId = undefined;
       const second = await this.ensure();
-      const r = await second.sb.commands.run(command, { timeoutMs });
+      const r = await second.sb.commands.run(wrapped, { timeoutMs });
       const note =
         "Sandbox diperbarui otomatis karena yang lama mati di tengah perintah; perintah diulang di sandbox baru (file sesi lama tidak terbawa).";
       return { stdout: r.stdout ?? "", stderr: r.stderr ?? "", exitCode: r.exitCode ?? 0, note };
