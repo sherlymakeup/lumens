@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { getSupabase, authConfigured } from "@/lib/supabase-client";
 
@@ -22,21 +22,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = authConfigured();
 
   useEffect(() => {
+    let cancelled = false;
+    // Safety timeout: jangan biarkan loading stuck lebih dari 3 detik.
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 3000);
+
     const sb = getSupabase();
     if (!sb) {
       setLoading(false);
+      clearTimeout(timeout);
       return;
     }
-    sb.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
+    sb.auth
+      .getSession()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        setLoading(false);
+        clearTimeout(timeout);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
+        clearTimeout(timeout);
+      });
     const { data: listener } = sb.auth.onAuthStateChange((_event, newSession) => {
+      if (cancelled) return;
       setSession(newSession);
       setUser(newSession?.user ?? null);
     });
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   async function signIn(email: string, password: string) {
@@ -60,12 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }
 
-  async function getToken(): Promise<string | null> {
+  const getToken = useCallback(async (): Promise<string | null> => {
     const sb = getSupabase();
     if (!sb) return null;
     const { data } = await sb.auth.getSession();
     return data.session?.access_token ?? null;
-  }
+  }, []);
 
   return (
     <AuthContext.Provider
