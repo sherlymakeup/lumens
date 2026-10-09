@@ -1,15 +1,10 @@
 import {
-  Brain,
   Check,
   Copy,
-  FileDown,
   GitFork,
-  Image as ImageIcon,
   Loader2,
   RefreshCw,
-  Search,
   Share2,
-  Terminal,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -169,86 +164,6 @@ export function MessageList({
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : null}
-            {message.toolCalls && message.toolCalls.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {message.toolCalls.map((tc, tcIndex) => {
-                  const KindIcon =
-                    tc.kind === "search"
-                      ? Search
-                      : tc.kind === "image"
-                        ? ImageIcon
-                        : tc.kind === "memory"
-                          ? Brain
-                          : tc.kind === "file"
-                            ? FileDown
-                            : Terminal;
-                  return (
-                    <details
-                      key={tcIndex}
-                      className="group rounded-xl border border-border bg-card/60 text-[13px]"
-                    >
-                      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2">
-                        <KindIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate font-mono text-xs text-muted-foreground">
-                          {tc.command}
-                        </span>
-                        <span
-                          className={cn(
-                            "ml-auto shrink-0 font-mono text-[11px]",
-                            tc.exitCode === 0 ? "text-emerald-500" : "text-destructive",
-                          )}
-                        >
-                          exit {tc.exitCode}
-                        </span>
-                      </summary>
-                      {tc.images && tc.images.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2 border-t border-border p-2">
-                          {tc.images.map((src, imgIndex) => (
-                            <img
-                              key={imgIndex}
-                              src={src}
-                              alt=""
-                              className="w-full rounded-lg border border-border object-contain"
-                              loading="lazy"
-                            />
-                          ))}
-                        </div>
-                      ) : null}
-                      {tc.files && tc.files.length > 0 ? (
-                        <div className="space-y-2 border-t border-border p-2">
-                          {tc.files.map((file, fileIndex) => (
-                            <a
-                              key={fileIndex}
-                              href={`data:${file.mime};base64,${file.base64}`}
-                              download={file.name}
-                              className="flex items-center gap-3 rounded-lg border border-border bg-background/60 px-3 py-2.5 transition-colors hover:border-primary/50"
-                            >
-                              <FileDown className="size-5 shrink-0 text-primary" />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium">
-                                  {file.name}
-                                </span>
-                                <span className="block font-mono text-[11px] text-muted-foreground">
-                                  {file.size >= 1048576
-                                    ? `${(file.size / 1048576).toFixed(1)} MB`
-                                    : `${(file.size / 1024).toFixed(1)} KB`}
-                                </span>
-                              </span>
-                              <span className="shrink-0 text-xs text-primary">
-                                {t["msg.download"] ?? "Unduh"}
-                              </span>
-                            </a>
-                          ))}
-                        </div>
-                      ) : null}
-                      <pre className="max-h-64 overflow-auto border-t border-border px-3 py-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
-                        {tc.output || t["msg.noOutput"]}
-                      </pre>
-                    </details>
-                  );
-                })}
               </div>
             ) : null}
             {!streaming && message.content && !message.error ? (

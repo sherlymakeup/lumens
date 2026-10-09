@@ -13,6 +13,7 @@ import { Composer } from "./composer";
 import { EmptyState } from "./empty-state";
 import { Header } from "./header";
 import { MessageList } from "./messages";
+import { ProcessPanel } from "./process-panel";
 import { SettingsPanel } from "./settings";
 import { Sidebar } from "./sidebar";
 import { MobileSidebar } from "./mobile-sidebar";
@@ -52,6 +53,8 @@ export function Studio() {
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
   const sidebarCollapsed = useStudio((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useStudio((s) => s.setSidebarCollapsed);
+  const setProcessPanelOpen = useStudio((s) => s.setProcessPanelOpen);
+  const processPanelOpen = useStudio((s) => s.processPanelOpen);
   const newConversation = useStudio((s) => s.newConversation);
   const addMessage = useStudio((s) => s.addMessage);
   const patchMessage = useStudio((s) => s.patchMessage);
@@ -67,6 +70,8 @@ export function Studio() {
   const [uploadSandboxId, setUploadSandboxId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // Panel proses kanan auto-muncul saat tool call pertama tiap run.
+  const processOpenedRef = useRef(false);
   // Stick to bottom only while the user is already near the bottom —
   // otherwise streaming would yank the scroll away from what they're reading.
   const stickRef = useRef(true);
@@ -191,6 +196,11 @@ export function Studio() {
         },
         onToolCall: (command, kind) => {
           setAgentPhase(phaseForToolKind(kind));
+          // Panel proses kanan auto-muncul di tool call pertama tiap run.
+          if (!processOpenedRef.current) {
+            processOpenedRef.current = true;
+            setProcessPanelOpen(true);
+          }
           const current = useStudio
             .getState()
             .conversations.find((item) => item.id === conversationId)
@@ -293,6 +303,7 @@ export function Studio() {
     setDraft("");
     setAttachments([]);
     setUploadSandboxId(null);
+    processOpenedRef.current = false;
 
     const style = styleInstruction(settings.tone, settings.length, t);
     const override = settings.systemPromptOverride.trim();
@@ -439,6 +450,23 @@ export function Studio() {
           </>
         )}
       </div>
+      {processPanelOpen ? (
+        <>
+          <aside className="hidden h-dvh w-80 shrink-0 border-l border-sidebar-border md:block">
+            <ProcessPanel />
+          </aside>
+          <div className="fixed inset-0 z-40 md:hidden">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setProcessPanelOpen(false)}
+              aria-hidden
+            />
+            <div className="absolute top-0 right-0 bottom-0 w-80 max-w-[85vw] border-l border-sidebar-border">
+              <ProcessPanel />
+            </div>
+          </div>
+        </>
+      ) : null}
       <SettingsPanel models={models} onModels={setModels} />
     </div>
   );

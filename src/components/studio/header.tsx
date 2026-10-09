@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu, Settings2 } from "lucide-react";
+import { Menu, Settings2, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -61,6 +61,8 @@ export function Header({ models }: { models: string[] }) {
   const setSettings = useStudio((s) => s.setSettings);
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
   const setSettingsOpen = useStudio((s) => s.setSettingsOpen);
+  const processPanelOpen = useStudio((s) => s.processPanelOpen);
+  const setProcessPanelOpen = useStudio((s) => s.setProcessPanelOpen);
   const t = useStrings();
   const options = models;
   const modelValue = options.includes(settings.model) ? settings.model : undefined;
@@ -105,6 +107,16 @@ export function Header({ models }: { models: string[] }) {
           {settings.model || t["header.noModels"]}
         </span>
       )}
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label={t["proc.title"]}
+        title={t["proc.title"]}
+        onClick={() => setProcessPanelOpen(!processPanelOpen)}
+        className={processPanelOpen ? "border-primary/50 text-primary" : undefined}
+      >
+        <Terminal className="size-4" />
+      </Button>
       <Button
         variant="outline"
         size="icon"

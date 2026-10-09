@@ -554,21 +554,31 @@ export const Route = createFileRoute("/api/agent")({
               const msg = body.choices?.[0]?.message;
               return {
                 content: msg?.content ?? "",
-                toolCalls: (msg?.tool_calls ?? []).map((tc, idx) => {
-                  let id = tc.id;
-                  if (!id) {
-                    // Quirk: gateway/model kadang mengembalikan tool_call tanpa id.
-                    // Upstream menolak tool message tanpa tool_call_id (400),
-                    // jadi generate fallback agar id tetap konsisten & non-empty.
-                    id = `call_fallback_${Date.now()}_${idx}`;
-                    console.warn(`[agent] tool_call tanpa id dari model — pakai fallback ${id}`);
-                  }
-                  return {
-                    id,
-                    name: tc.function?.name ?? "",
-                    args: tc.function?.arguments ?? "{}",
-                  };
-                }),
+                toolCalls: (msg?.tool_calls ?? [])
+                  .map((tc, idx) => {
+                    let id = tc.id;
+                    if (!id) {
+                      // Quirk: gateway/model kadang mengembalikan tool_call tanpa id.
+                      // Upstream menolak tool message tanpa tool_call_id (400),
+                      // jadi generate fallback agar id tetap konsisten & non-empty.
+                      id = `call_fallback_${Date.now()}_${idx}`;
+                      console.warn(`[agent] tool_call tanpa id dari model — pakai fallback ${id}`);
+                    }
+                    return {
+                      id,
+                      name: tc.function?.name ?? "",
+                      args: tc.function?.arguments ?? "{}",
+                    };
+                  })
+                  // Quirk: model kadang mengembalikan tool_call dengan function.name
+                  // kosong. Tidak bisa dieksekusi & upstream menolaknya (400), jadi buang.
+                  .filter((tc) => {
+                    if (!tc.name.trim()) {
+                      console.warn(`[agent] tool_call tanpa nama dari model — dibuang (${tc.id})`);
+                      return false;
+                    }
+                    return true;
+                  }),
               };
             }
 
