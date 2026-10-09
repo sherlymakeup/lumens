@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { generateAgent, generateStream } from "@/lib/generate";
+import { resolveAgentSandboxId } from "@/lib/agent-upload";
 import { extrasInstruction, MODE_BY_ID, defaultExtras } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
 import { applyDensity, applyFontSize, applyTheme } from "@/lib/theme";
@@ -34,6 +35,7 @@ export function Studio() {
   const [models, setModels] = useState<string[]>([]);
   const [thinking, setThinking] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [uploadSandboxId, setUploadSandboxId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   // Stick to bottom only while the user is already near the bottom —
@@ -227,6 +229,13 @@ export function Studio() {
     const conv = useStudio.getState().conversations.find((item) => item.id === id) ?? null;
     if (!conv) return;
 
+    // Upload bisa membuat sandbox baru — pakai sandbox itu agar file lampiran
+    // terbaca agent, dan simpan ke percakapan untuk pesan berikutnya.
+    const agentSandboxId = resolveAgentSandboxId(conv.sandboxId, uploadSandboxId);
+    if (agentSandboxId && agentSandboxId !== conv.sandboxId) {
+      setSandboxId(id, agentSandboxId);
+    }
+
     const history = prior ?? conv.messages;
     const user: ChatMessage = {
       id: uid(),
@@ -247,6 +256,7 @@ export function Studio() {
     setThinking(false);
     setDraft("");
     setAttachments([]);
+    setUploadSandboxId(null);
 
     const mode = MODE_BY_ID[conv.modeId];
     const extra = extrasInstruction(conv.modeId, conv.extras);
@@ -372,6 +382,7 @@ export function Studio() {
           attachments={attachments}
           onAttachments={setAttachments}
           sandboxId={conversation?.sandboxId}
+          onUploadSandboxId={setUploadSandboxId}
         />
       </div>
       <SettingsPanel models={models} onModels={setModels} />

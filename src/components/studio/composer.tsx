@@ -30,6 +30,7 @@ export function Composer({
   attachments,
   onAttachments,
   sandboxId,
+  onUploadSandboxId,
 }: {
   modeId: ModeId;
   extras: Record<string, string>;
@@ -43,6 +44,7 @@ export function Composer({
   attachments: ChatAttachment[];
   onAttachments: (next: ChatAttachment[]) => void;
   sandboxId?: string;
+  onUploadSandboxId?: (sandboxId: string) => void;
 }) {
   const mode = MODE_BY_ID[modeId];
   const model = useStudio((s) => s.settings.model);
@@ -116,6 +118,9 @@ export function Composer({
           continue;
         }
         next.push(body.attachment);
+        // Upload bisa membuat sandbox baru — propagasi ID-nya agar request
+        // agent nanti memakai sandbox yang sama (file tidak "hilang").
+        if (body.sandboxId) onUploadSandboxId?.(body.sandboxId);
       }
       onAttachments(next);
     } finally {

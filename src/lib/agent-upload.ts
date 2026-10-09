@@ -44,6 +44,19 @@ export function uploadPath(name: string): string {
 }
 
 /**
+ * Sandbox yang dipakai request agent.
+ * Prioritas: sandbox percakapan > sandbox dari hasil upload terakhir.
+ * (Upload bisa membuat sandbox baru ketika percakapan belum punya —
+ *  sandboxId itu wajib dipropagasi, kalau tidak file "hilang".)
+ */
+export function resolveAgentSandboxId(
+  conversationSandboxId: string | null | undefined,
+  uploadSandboxId: string | null | undefined,
+): string | undefined {
+  return conversationSandboxId || uploadSandboxId || undefined;
+}
+
+/**
  * Shell command untuk menulis base64 ke file sandbox.
  * Base64 alphabet aman di-embed langsung; path di-quote.
  */

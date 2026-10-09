@@ -106,3 +106,12 @@ test("buildWriteCommand actually writes the file in a real shell", async () => {
 test("upload size cap is sane", () => {
   assert.equal(MAX_UPLOAD_BYTES, 10 * 1024 * 1024);
 });
+
+test("resolveAgentSandboxId: prioritas sandbox percakapan", async () => {
+  const { resolveAgentSandboxId } = await import("../src/lib/agent-upload.ts");
+  assert.equal(resolveAgentSandboxId("conv-1", "upl-2"), "conv-1");
+  assert.equal(resolveAgentSandboxId(undefined, "upl-2"), "upl-2");
+  assert.equal(resolveAgentSandboxId(null, "upl-2"), "upl-2");
+  assert.equal(resolveAgentSandboxId(undefined, undefined), undefined);
+  assert.equal(resolveAgentSandboxId("", ""), undefined);
+});
