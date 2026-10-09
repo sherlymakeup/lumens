@@ -236,15 +236,8 @@ export const useStudio = create<StudioState>()(
       name: "chat-studio-v1",
       partialize: (state) => ({
         settings: state.settings,
-        // Tool-call images/files are base64 (MBs) — drop them on persist
-        // to avoid blowing the localStorage quota; text summaries stay.
-        conversations: state.conversations.map((conv) => ({
-          ...conv,
-          messages: conv.messages.map((message) => ({
-            ...message,
-            toolCalls: message.toolCalls?.map(({ images: _dropped, files: _droppedFiles, ...rest }) => rest),
-          })),
-        })),
+        // Conversations TIDAK lagi di localStorage — pindah ke Supabase per-user
+        // (lihat useConversationsSync). Hanya settings & preferensi device yang lokal.
         activeId: state.activeId,
         engineModels: state.engineModels,
         customModels: state.customModels,

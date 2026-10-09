@@ -1,5 +1,19 @@
 import type { AgentFile, GenerateRequest } from "./types";
 import type { PlanStep } from "./agent-plan";
+import { getSupabase } from "./supabase-client";
+
+/** Ambil JWT untuk Authorization header (null jika auth tidak dikonfigurasi). */
+async function getAuthHeader(): Promise<Record<string, string>> {
+  try {
+    const sb = getSupabase();
+    if (!sb) return {};
+    const { data } = await sb.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 export type StreamHandlers = {
   onDelta: (text: string) => void;
@@ -134,9 +148,10 @@ export async function generateAgent(
 ) {
   let response: Response;
   try {
+    const authHeader = await getAuthHeader();
     response = await fetch("/api/agent", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader },
       body: JSON.stringify({
         messages: request.messages,
         threadId: request.threadId,

@@ -13,9 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectionRouteImport } from './routes/connection'
 import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiConnectionsRouteImport } from './routes/api/connections'
+import { Route as ApiConversationsRouteImport } from './routes/api/conversations'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiImagesRouteImport } from './routes/api/images'
@@ -51,6 +53,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -64,6 +71,11 @@ const ApiAgentRoute = ApiAgentRouteImport.update({
 const ApiConnectionsRoute = ApiConnectionsRouteImport.update({
   id: '/api/connections',
   path: '/api/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConversationsRoute = ApiConversationsRouteImport.update({
+  id: '/api/conversations',
+  path: '/api/conversations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -142,9 +154,11 @@ export interface FileRoutesByFullPath {
   '/connection': typeof ConnectionRoute
   '/connectors': typeof ConnectorsRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/connections': typeof ApiConnectionsRouteWithChildren
+  '/api/conversations': typeof ApiConversationsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -165,9 +179,11 @@ export interface FileRoutesByTo {
   '/connection': typeof ConnectionRoute
   '/connectors': typeof ConnectorsRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/connections': typeof ApiConnectionsRouteWithChildren
+  '/api/conversations': typeof ApiConversationsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -189,9 +205,11 @@ export interface FileRoutesById {
   '/connection': typeof ConnectionRoute
   '/connectors': typeof ConnectorsRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
   '/api/connections': typeof ApiConnectionsRouteWithChildren
+  '/api/conversations': typeof ApiConversationsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -214,9 +232,11 @@ export interface FileRouteTypes {
     | '/connection'
     | '/connectors'
     | '/dashboard'
+    | '/login'
     | '/projects'
     | '/api/agent'
     | '/api/connections'
+    | '/api/conversations'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
@@ -237,9 +257,11 @@ export interface FileRouteTypes {
     | '/connection'
     | '/connectors'
     | '/dashboard'
+    | '/login'
     | '/projects'
     | '/api/agent'
     | '/api/connections'
+    | '/api/conversations'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
@@ -260,9 +282,11 @@ export interface FileRouteTypes {
     | '/connection'
     | '/connectors'
     | '/dashboard'
+    | '/login'
     | '/projects'
     | '/api/agent'
     | '/api/connections'
+    | '/api/conversations'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
@@ -284,9 +308,11 @@ export interface RootRouteChildren {
   ConnectionRoute: typeof ConnectionRoute
   ConnectorsRoute: typeof ConnectorsRoute
   DashboardRoute: typeof DashboardRoute
+  LoginRoute: typeof LoginRoute
   ProjectsRoute: typeof ProjectsRoute
   ApiAgentRoute: typeof ApiAgentRouteWithChildren
   ApiConnectionsRoute: typeof ApiConnectionsRouteWithChildren
+  ApiConversationsRoute: typeof ApiConversationsRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImagesRoute: typeof ApiImagesRoute
@@ -330,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects': {
       id: '/projects'
       path: '/projects'
@@ -349,6 +382,13 @@ declare module '@tanstack/react-router' {
       path: '/api/connections'
       fullPath: '/api/connections'
       preLoaderRoute: typeof ApiConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/conversations': {
+      id: '/api/conversations'
+      path: '/api/conversations'
+      fullPath: '/api/conversations'
+      preLoaderRoute: typeof ApiConversationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -492,9 +532,11 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectionRoute: ConnectionRoute,
   ConnectorsRoute: ConnectorsRoute,
   DashboardRoute: DashboardRoute,
+  LoginRoute: LoginRoute,
   ProjectsRoute: ProjectsRoute,
   ApiAgentRoute: ApiAgentRouteWithChildren,
   ApiConnectionsRoute: ApiConnectionsRouteWithChildren,
+  ApiConversationsRoute: ApiConversationsRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImagesRoute: ApiImagesRoute,

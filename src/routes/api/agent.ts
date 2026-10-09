@@ -39,6 +39,7 @@ import {
   upsertThread,
 } from "@/lib/agent-threads-db.ts";
 import { isValidThreadRef, threadWorkdir, normalizeWorkdirPaths } from "@/lib/thread.ts";
+import { verifyAuth, getServiceClient } from "@/lib/auth-server.ts";
 import { runSubagent } from "@/lib/agent-subagent.ts";
 
 const Message = z.object({
@@ -410,6 +411,43 @@ export const Route = createFileRoute("/api/agent")({
         }
         const { messages, connection, params, attachments } = parsed.data;
         let sandboxId: string | undefined = parsed.data.sandboxId;
+
+        // Auth: verifikasi JWT, cek credits (admin unlimited).
+        // Jika auth tidak dikonfigurasi (env kosong), izinkan tanpa batas (mode single-user).
+        const userId = await verifyAuth(request);
+        const sb = getServiceClient();
+        const authConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
+        if (authConfigured && !userId) {
+          return Response.json({ error: "Unauthorized. Silakan login." }, { status: 401 });
+        }
+        if (userId && sb) {
+          // Pastikan profile ada.
+          await sb.from("profiles").upsert({ id: userId }, { onConflict: "id" });
+          const { data: profile } = await sb
+            .from("profiles")
+            .select("credits, unlimited, role")
+            .eq("id", userId)
+            .single();
+          // Admin otomatis unlimited.
+          const isUnlimited =
+            profile?.unlimited === true || profile?.role === "admin";
+          if (!isUnlimited && (profile?.credits ?? 0) <= 0) {
+            return Response.json(
+              { error: "Kredit habis. Hubungi admin untuk top-up." },
+              { status: 402 },
+            );
+          }
+          // Simpan untuk deduct nanti.
+          (request as any).__userId = userId;
+          (request as any).__unlimited = isUnlimited;
+          // Deduct 1 credit per panggilan (admin unlimited tidak dikurangi).
+          if (!isUnlimited && profile) {
+            await sb
+              .from("profiles")
+              .update({ credits: Math.max(0, (profile.credits ?? 1) - 1) })
+              .eq("id", userId);
+          }
+        }
 
         // Thread registry (Fase A): resolve sandbox server-side dari threadId.
         // Prioritas: registry > sandboxId kiriman client (fallback stateless).

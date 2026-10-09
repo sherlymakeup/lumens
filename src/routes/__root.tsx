@@ -1,11 +1,24 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
+import { AuthProvider as SupabaseAuthProvider } from "@/lib/auth-context";
+import { AuthGate } from "@/components/auth-gate";
+import { useConversationsSync } from "@/lib/conversations-sync";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "XDIRGA TOOLS";
+
+function AppShell() {
+  useConversationsSync();
+  return (
+    <TooltipProvider>
+      <Outlet />
+      <Toaster />
+    </TooltipProvider>
+  );
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -37,10 +50,11 @@ export const Route = createRootRoute({
       <body>
         <PreviewHostBridge />
         <AuthProvider>
-          <TooltipProvider>
-            <Outlet />
-            <Toaster />
-          </TooltipProvider>
+          <SupabaseAuthProvider>
+            <AuthGate>
+              <AppShell />
+            </AuthGate>
+          </SupabaseAuthProvider>
         </AuthProvider>
         <Scripts />
       </body>

@@ -6,6 +6,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   LayoutTemplate,
+  LogOut,
   Palette,
   PanelLeftClose,
   PenLine,
@@ -20,6 +21,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStudio } from "@/lib/store";
+import { useAuth } from "@/lib/auth-context";
+import { deleteConversationRemote } from "@/lib/conversations-sync";
 import { cn } from "@/lib/utils";
 import { useStrings, type StringKey } from "@/lib/i18n";
 
@@ -89,6 +92,7 @@ function NavHeading({ children }: { children: string }) {
 function ChatList({ onNavigate }: { onNavigate: () => void }) {
   const t = useStrings();
   const navigate = useNavigate();
+  const { getToken } = useAuth();
   const conversations = useStudio((s) => s.conversations);
   const activeId = useStudio((s) => s.activeId);
   const selectConversation = useStudio((s) => s.selectConversation);
@@ -190,7 +194,10 @@ function ChatList({ onNavigate }: { onNavigate: () => void }) {
                 type="button"
                 aria-label={t["nav.deleteDraft"]}
                 onClick={() => {
-                  if (window.confirm(t["nav.deleteConfirm"])) deleteConversation(item.id);
+                  if (window.confirm(t["nav.deleteConfirm"])) {
+                    deleteConversation(item.id);
+                    void deleteConversationRemote(getToken, item.id);
+                  }
                 }}
                 className="rounded-md p-2 text-muted-foreground hover:text-foreground"
               >
@@ -210,6 +217,7 @@ export function Sidebar({ className }: { className?: string }) {
   const setSidebarCollapsed = useStudio((s) => s.setSidebarCollapsed);
   const setSettingsOpen = useStudio((s) => s.setSettingsOpen);
   const navigate = useNavigate();
+  const { user, signOut, configured } = useAuth();
   const t = useStrings();
   const close = () => setSidebarOpen(false);
 
@@ -268,6 +276,21 @@ export function Sidebar({ className }: { className?: string }) {
           <Settings2 className="size-4 shrink-0" strokeWidth={1.7} />
           <span className="min-w-0 flex-1 truncate">{t["nav.settings"]}</span>
         </button>
+        {configured && user ? (
+          <button
+            type="button"
+            onClick={() => {
+              void signOut().then(() => navigate({ to: "/login", replace: true }));
+            }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-muted-foreground transition-colors duration-150 hover:bg-sidebar-accent/70 hover:text-foreground"
+            title={user.email ?? ""}
+          >
+            <LogOut className="size-4 shrink-0" strokeWidth={1.7} />
+            <span className="min-w-0 flex-1 truncate">
+              {t["auth.signOut"]} ({user.email?.split("@")[0] ?? ""})
+            </span>
+          </button>
+        ) : null}
       </div>
     </div>
   );
