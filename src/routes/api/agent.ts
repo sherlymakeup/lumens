@@ -39,6 +39,7 @@ import {
   upsertThread,
 } from "@/lib/agent-threads-db.ts";
 import { isValidThreadRef, threadWorkdir } from "@/lib/thread.ts";
+import { runSubagent } from "@/lib/agent-subagent.ts";
 
 const Message = z.object({
   role: z.enum(["system", "user", "assistant"]),
@@ -74,6 +75,9 @@ const Body = z.object({
 // (see SANDBOX_IDLE_MS in @/lib/agent-sandbox).
 const MAX_OUTPUT = 8_000;
 const MAX_ITERATIONS = 10;
+// Fase C: batas subagent paralel.
+const MAX_PARALLEL_SUBAGENTS = 3;
+const SUBAGENT_TIMEOUT_MS = 90_000;
 
 const AGENT_SYSTEM = `You are an AI agent with direct access to a Linux sandbox (Debian 12, 2 CPU, ~512MB RAM).
 You have three tools:
@@ -131,6 +135,17 @@ Planning (for tasks with more than 2 steps):
 - Call set_plan again to update statuses as steps complete (in_progress → done).
 - Verify the final result before declaring done. If a step fails, revise the
   plan instead of silently skipping it.
+
+Subagents (parallel delegation):
+- Use spawn_subagent for independent subtasks that can run in parallel
+  (research, parallel computations, exploring alternatives).
+- You may spawn up to 3 per turn — issue them in ONE turn so they run in parallel.
+- Each subagent gets a FRESH sandbox and its own working directory; it cannot
+  see your files or spawn further subagents. Pass everything it needs in the
+  task/context fields.
+- Subagent results come back as short summaries — keep delegated tasks
+  self-contained with clear done criteria.
+- Do NOT delegate when the task is trivial or strictly sequential.
 `;
 
 const TOOLS = [
@@ -284,6 +299,30 @@ const TOOLS = [
           },
         },
         required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "spawn_subagent",
+      description:
+        "Delegate a self-contained subtask to a parallel subagent. Each subagent gets its OWN fresh sandbox and working directory, runs independently (max 5 steps), and reports back a concise summary. Use for parallelizable work: independent research, parallel computations, or exploring alternatives. You can spawn up to 3 per turn — they run in PARALLEL.",
+      parameters: {
+        type: "object",
+        properties: {
+          task: {
+            type: "string",
+            description:
+              "The task for the subagent — self-contained, specific, with clear done criteria. E.g. \"Research current EV prices in Jakarta from 3 sources and summarize in a table.\"",
+          },
+          context: {
+            type: "string",
+            description:
+              "Optional background the subagent needs (it does NOT see this conversation). Keep it short.",
+          },
+        },
+        required: ["task"],
       },
     },
   },
@@ -445,6 +484,7 @@ export const Route = createFileRoute("/api/agent")({
             async function callModel(
               convo: ChatMsg[],
               withTools: boolean,
+              toolsOverride?: unknown[],
             ): Promise<{
               content: string;
               toolCalls: { id: string; name: string; args: string }[];
@@ -469,7 +509,7 @@ export const Route = createFileRoute("/api/agent")({
                 stream: false,
               };
               if (withTools) {
-                payload.tools = allTools;
+                payload.tools = toolsOverride ?? allTools;
                 payload.tool_choice = "auto";
               }
               const res = await fetch(url, {
@@ -552,6 +592,8 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
               let finalText = "";
               let toolsSupported = true;
               let visionFallback = false;
+              // spawn_subagent dikumpulkan per-turn lalu dieksekusi paralel.
+              const pendingSpawns: { id: string; task: string; context?: string }[] = [];
 
               for (let i = 0; i < MAX_ITERATIONS; i++) {
                 let content = "";
@@ -593,6 +635,15 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                     args = JSON.parse(tc.args) as Record<string, unknown>;
                   } catch {
                     /* keep empty */
+                  }
+                  // spawn_subagent: kumpulkan dulu, eksekusi paralel SETELAH loop tool lain.
+                  if (tc.name === "spawn_subagent") {
+                    pendingSpawns.push({
+                      id: tc.id,
+                      task: String(args.task ?? "").slice(0, 2000),
+                      context: args.context ? String(args.context).slice(0, 2000) : undefined,
+                    });
+                    continue;
                   }
 
                   if (tc.name === "sandbox_exec") {
@@ -774,6 +825,101 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                       content: `Unknown tool: ${tc.name}`,
                     });
                   }
+                }
+                // Fase C: eksekusi spawn_subagent yang terkumpul — paralel, maks 3.
+                // Tiap subagent = child thread + SANDBOX FRESH (bukan warisan parent).
+                if (pendingSpawns.length > 0) {
+                  const batch = pendingSpawns.slice(0, MAX_PARALLEL_SUBAGENTS);
+                  const skipped = pendingSpawns.length - batch.length;
+                  const tavilyKey = process.env.TAVILY_API_KEY?.trim() || undefined;
+                  const subResults = await Promise.all(
+                    batch.map(async (sp) => {
+                      if (!sp.task.trim()) {
+                        return {
+                          id: sp.id,
+                          ok: false,
+                          summary: "Task kosong — subagent tidak dijalankan.",
+                          childThreadId: "",
+                        };
+                      }
+                      send({
+                        type: "tool_call",
+                        kind: "subagent",
+                        command: sp.task.slice(0, 120),
+                      });
+                      const subSignal = AbortSignal.any([
+                        request.signal,
+                        AbortSignal.timeout(SUBAGENT_TIMEOUT_MS),
+                      ]);
+                      const r = await runSubagent({
+                        task: sp.task,
+                        context: sp.context,
+                        parentThreadId: threadId ?? "thr_unknown",
+                        modelFn: async (messages, tools) => {
+                          const out = await callModel(messages as ChatMsg[], true, tools);
+                          return { content: out.content, toolCalls: out.toolCalls };
+                        },
+                        createSandbox: async (workdir) => {
+                          const childSession = new SandboxSession(
+                            {
+                              sandbox: {
+                                connect: (id) =>
+                                  novita.sandbox.connect(id) as Promise<SandboxLike>,
+                                create: (opts) =>
+                                  novita.sandbox.create(opts) as Promise<SandboxLike>,
+                              },
+                            },
+                            templateId,
+                            Date.now,
+                            undefined, // fresh — JANGAN warisi sandbox parent
+                            workdir,
+                          );
+                          await childSession.ensure();
+                          const sid = childSession.sandboxId;
+                          if (!sid) throw new Error("Gagal membuat sandbox subagent.");
+                          return {
+                            sandboxId: sid,
+                            run: async (cmd: string, timeoutMs: number) => {
+                              const rr = await childSession.run(cmd, timeoutMs);
+                              return {
+                                stdout: rr.stdout ?? "",
+                                stderr: rr.stderr ?? "",
+                                exitCode: rr.exitCode ?? 0,
+                              };
+                            },
+                            kill: async () => {
+                              await novita.sandbox.kill(sid).catch(() => {});
+                            },
+                          };
+                        },
+                        registerThread: tEnv
+                          ? async (input) => {
+                              await upsertThread(tEnv, input).catch(() => {});
+                            }
+                          : undefined,
+                        webSearch: async (query: string, maxResults?: number) =>
+                          (await runWebSearch(query, tavilyKey, maxResults)).text,
+                        webRead: async (url: string) =>
+                          (await runWebRead(url, tavilyKey)).text,
+                        signal: subSignal,
+                      });
+                      return { id: sp.id, ...r };
+                    }),
+                  );
+                  for (const r of subResults) {
+                    const output = r.ok
+                      ? `[subagent ${r.childThreadId}] ${r.summary}`
+                      : `[subagent gagal] ${r.summary}`;
+                    send({ type: "tool_result", output: clip(output), exitCode: r.ok ? 0 : 1 });
+                    convo.push({ role: "tool", tool_call_id: r.id, content: clip(output) });
+                  }
+                  if (skipped > 0) {
+                    convo.push({
+                      role: "user",
+                      content: `Melewati ${skipped} spawn_subagent tambahan (maks ${MAX_PARALLEL_SUBAGENTS} paralel per turn).`,
+                    });
+                  }
+                  pendingSpawns.length = 0;
                 }
                 // If the model produced no text and only tool calls on the last
                 // iteration, ask it to summarize.
