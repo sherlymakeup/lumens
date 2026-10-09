@@ -16,7 +16,7 @@ import {
   Settings2,
   Trash2,
 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStudio } from "@/lib/store";
@@ -88,6 +88,7 @@ function NavHeading({ children }: { children: string }) {
 /** Daftar riwayat chat ala Grok ("Chats") — pindah dari popover header ke sidebar. */
 function ChatList({ onNavigate }: { onNavigate: () => void }) {
   const t = useStrings();
+  const navigate = useNavigate();
   const conversations = useStudio((s) => s.conversations);
   const activeId = useStudio((s) => s.activeId);
   const selectConversation = useStudio((s) => s.selectConversation);
@@ -165,6 +166,7 @@ function ChatList({ onNavigate }: { onNavigate: () => void }) {
                   type="button"
                   onClick={() => {
                     selectConversation(item.id);
+                    navigate({ to: "/thread/$threadId", params: { threadId: item.id } });
                     onNavigate();
                   }}
                   className="min-w-0 flex-1 truncate px-2.5 py-2 text-left text-sm"
@@ -180,7 +182,7 @@ function ChatList({ onNavigate }: { onNavigate: () => void }) {
                   setEditingId(item.id);
                   setEditingTitle(item.title);
                 }}
-                className="rounded-md p-2 text-muted-foreground transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100"
+                className="rounded-md p-2 text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="size-3.5" />
               </button>
@@ -190,7 +192,7 @@ function ChatList({ onNavigate }: { onNavigate: () => void }) {
                 onClick={() => {
                   if (window.confirm(t["nav.deleteConfirm"])) deleteConversation(item.id);
                 }}
-                className="rounded-md p-2 text-muted-foreground transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100"
+                className="rounded-md p-2 text-muted-foreground hover:text-foreground"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -207,8 +209,16 @@ export function Sidebar({ className }: { className?: string }) {
   const setSidebarOpen = useStudio((s) => s.setSidebarOpen);
   const setSidebarCollapsed = useStudio((s) => s.setSidebarCollapsed);
   const setSettingsOpen = useStudio((s) => s.setSettingsOpen);
+  const navigate = useNavigate();
   const t = useStrings();
   const close = () => setSidebarOpen(false);
+
+  function handleNewChat() {
+    const id = newConversation();
+    // Navigasi eksplisit: sidebar dipakai di semua halaman, bukan cuma chat.
+    navigate({ to: "/thread/$threadId", params: { threadId: id } });
+    close();
+  }
 
   return (
     <div className={cn("flex h-full flex-col bg-sidebar text-sidebar-foreground", className)}>
@@ -230,7 +240,7 @@ export function Sidebar({ className }: { className?: string }) {
       </div>
 
       <div className="px-3 pb-3">
-        <Button className="w-full justify-center" onClick={() => newConversation()}>
+        <Button className="w-full justify-center" onClick={handleNewChat}>
           <Plus className="size-4" />
           {t["nav.newChat"]}
         </Button>
