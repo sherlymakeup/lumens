@@ -74,7 +74,7 @@ const Body = z.object({
 // Idle timeout per sandbox session: 5 minutes, refreshed on every use
 // (see SANDBOX_IDLE_MS in @/lib/agent-sandbox).
 const MAX_OUTPUT = 8_000;
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 15;
 // Fase C: batas subagent paralel.
 const MAX_PARALLEL_SUBAGENTS = 3;
 const SUBAGENT_TIMEOUT_MS = 90_000;
@@ -106,6 +106,8 @@ Working directory policy (isolated per conversation thread):
 
 Rules:
 - When the user asks you to compute, inspect, create, run, or verify something with the computer, USE sandbox_exec — don't just describe what to do.
+- NEVER write "I will continue", "please wait", "mohon tunggu", or any "next steps" narration INSTEAD of acting. If the task isn't done, keep calling tools — do not output a status update and stop. Only write your final summary when the task is 100% complete and all files are delivered via read_file.
+- A task is NOT done until: files the user asked for are created AND delivered (read_file called, download card shown), commands are verified, and the summary is written. Partial work with "I'll continue later" is a failure.
 - Long commands need a generous timeoutMs: installs/downloads/builds can take minutes — set 180000-300000 for those. If a command times out, retry with a bigger timeoutMs or split the work into smaller steps.
 - The sandbox auto-refreshes before Novita's 1-hour limit; if you see a note that it was replaced, files from the old session are gone — recreate what you need and continue the plan.
 - If the user asks to resend a file and it's missing (sandbox was replaced): DO NOT give up. Recreate the file from the conversation history — the commands you used to build it are in your previous tool calls. Rebuild it, verify it exists with ls, then deliver it via read_file.
