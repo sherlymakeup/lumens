@@ -5,6 +5,12 @@
 import { newThreadId, threadWorkdir } from "./thread.ts";
 import { runWebRead, runWebSearch } from "./agent-tools.ts";
 import { fetchSandboxFile } from "./agent-files.ts";
+import {
+  getTemplate,
+  buildTemplatePrompt,
+  templateTools,
+  type SubagentTemplateId,
+} from "./agent-subagent-templates.ts";
 
 export const SUBAGENT_MAX_ITERATIONS = 5;
 export const SUBAGENT_SUMMARY_CHARS = 2000;
@@ -159,6 +165,8 @@ async function dispatchSubagentTool(
 export type RunSubagentOpts = {
   task: string;
   context?: string;
+  /** P1: template Tasklet-style. Jika diisi, system prompt + toolset mengikuti template. */
+  templateId?: SubagentTemplateId;
   parentThreadId: string;
   modelFn: SubagentModelFn;
   createSandbox: (workdir: string) => Promise<SubagentSandbox>;
@@ -220,6 +228,18 @@ export async function runSubagent(opts: RunSubagentOpts): Promise<SubagentResult
           `\n\nWork in ${workdir}. Report back concisely.`,
       },
     ];
+    // P1: jika template dipilih, pakai prompt + toolset template.
+    let activeTools: unknown[] = SUBAGENT_TOOLS;
+    const template = opts.templateId ? getTemplate(opts.templateId) : null;
+    if (template) {
+      const built = buildTemplatePrompt(template, opts.task, opts.context);
+      messages[0] = { role: "system", content: built.system };
+      messages[1] = {
+        role: "user",
+        content: built.user + `\n\nWork in ${workdir}.`,
+      };
+      activeTools = templateTools(template);
+    }
     const maxIter = opts.maxIterations ?? SUBAGENT_MAX_ITERATIONS;
     let lastContent = "";
     let hitLimit = false;
@@ -229,7 +249,7 @@ export async function runSubagent(opts: RunSubagentOpts): Promise<SubagentResult
         lastContent = "Subagent dibatalkan (timeout/signal).";
         break;
       }
-      const { content, toolCalls } = await opts.modelFn(messages, SUBAGENT_TOOLS);
+      const { content, toolCalls } = await opts.modelFn(messages, activeTools);
       lastContent = content;
       messages.push({
         role: "assistant",

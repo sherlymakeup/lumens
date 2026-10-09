@@ -159,6 +159,9 @@ Subagents (parallel delegation):
 - Use spawn_subagent for independent subtasks that can run in parallel
   (research, parallel computations, exploring alternatives).
 - You may spawn up to 3 per turn — issue them in ONE turn so they run in parallel.
+- Pick a template when it fits: "research" for web research, "data-processor"
+  for data transform/analysis, "file-worker" for creating/executing files,
+  "integration" for calling external HTTP APIs. Omit for general tasks.
 - Each subagent gets a FRESH sandbox and its own working directory; it cannot
   see your files or spawn further subagents. Pass everything it needs in the
   task/context fields.
@@ -326,7 +329,7 @@ const TOOLS = [
     function: {
       name: "spawn_subagent",
       description:
-        "Delegate a self-contained subtask to a parallel subagent. Each subagent gets its OWN fresh sandbox and working directory, runs independently (max 5 steps), and reports back a concise summary. Use for parallelizable work: independent research, parallel computations, or exploring alternatives. You can spawn up to 3 per turn — they run in PARALLEL.",
+        "Delegate a self-contained subtask to a parallel subagent. Each subagent gets its OWN fresh sandbox and working directory, runs independently (max 5 steps), and reports back a concise summary. Use for parallelizable work: independent research, parallel computations, or exploring alternatives. You can spawn up to 3 per turn — they run in PARALLEL. Optionally pick a specialized template: research (web research, structured findings), data-processor (transform/analyze data with code), file-worker (create/execute files), integration (call external HTTP APIs).",
       parameters: {
         type: "object",
         properties: {
@@ -339,6 +342,12 @@ const TOOLS = [
             type: "string",
             description:
               "Optional background the subagent needs (it does NOT see this conversation). Keep it short.",
+          },
+          template: {
+            type: "string",
+            enum: ["research", "data-processor", "file-worker", "integration"],
+            description:
+              "Optional specialized template that shapes the subagent's instructions, allowed tools, and output format. Omit for a general-purpose subagent.",
           },
         },
         required: ["task"],
@@ -669,7 +678,12 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
               let toolsSupported = true;
               let visionFallback = false;
               // spawn_subagent dikumpulkan per-turn lalu dieksekusi paralel.
-              const pendingSpawns: { id: string; task: string; context?: string }[] = [];
+              const pendingSpawns: {
+                id: string;
+                task: string;
+                context?: string;
+                templateId?: "research" | "data-processor" | "file-worker" | "integration";
+              }[] = [];
 
               for (let i = 0; i < MAX_ITERATIONS; i++) {
                 let content = "";
@@ -714,10 +728,17 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                   }
                   // spawn_subagent: kumpulkan dulu, eksekusi paralel SETELAH loop tool lain.
                   if (tc.name === "spawn_subagent") {
+                    const templateRaw = String(args.template ?? "").trim();
+                    const templateId = (
+                      ["research", "data-processor", "file-worker", "integration"] as const
+                    ).includes(templateRaw as never)
+                      ? (templateRaw as "research" | "data-processor" | "file-worker" | "integration")
+                      : undefined;
                     pendingSpawns.push({
                       id: tc.id,
                       task: String(args.task ?? "").slice(0, 2000),
                       context: args.context ? String(args.context).slice(0, 2000) : undefined,
+                      templateId,
                     });
                     continue;
                   }
@@ -934,6 +955,7 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                       const r = await runSubagent({
                         task: sp.task,
                         context: sp.context,
+                        templateId: sp.templateId,
                         parentThreadId: threadId ?? "thr_unknown",
                         modelFn: async (messages, tools) => {
                           const out = await callModel(messages as ChatMsg[], true, tools);
