@@ -1,4 +1,5 @@
 import {
+  Blocks,
   Bot,
   Code2,
   FolderKanban,
@@ -37,6 +38,7 @@ const ENGINE_NAV = [
 const MANAGE_NAV = [
   { to: "/projects", labelKey: "proj.title", Icon: FolderKanban },
   { to: "/connection", labelKey: "conn.title", Icon: Plug },
+  { to: "/connectors", labelKey: "ctr.title", Icon: Blocks },
 ] as const;
 
 function NavLinks({

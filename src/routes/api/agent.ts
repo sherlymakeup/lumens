@@ -21,6 +21,17 @@ import {
   type ContentPart,
   type UploadAttachment,
 } from "@/lib/agent-upload";
+import {
+  buildConnectorFunctionTools,
+  connectorSlug,
+  executeConnectorTool,
+  parseToolFunctionName,
+  type ConnectorRecord,
+} from "@/lib/agent-connectors.ts";
+import {
+  connectionEnv,
+  listEnabledConnectionsFull,
+} from "@/lib/agent-connections-db.ts";
 
 const Message = z.object({
   role: z.enum(["system", "user", "assistant"]),
@@ -379,6 +390,31 @@ export const Route = createFileRoute("/api/agent")({
               sandboxId,
             );
 
+            // Konektor (Tasklet-style): load koneksi aktif + bangun function tools.
+            // Secret hanya hidup di server — tidak pernah ke model/client.
+            let connectorRows: (ConnectorRecord & { secret: string | null })[] = [];
+            let connectorTools: ReturnType<typeof buildConnectorFunctionTools> = [];
+            try {
+              const loaded = await listEnabledConnectionsFull(connectionEnv());
+              if (loaded.ok) {
+                connectorRows = loaded.rows.map((r) => ({
+                  id: r.id,
+                  name: r.name,
+                  kind: r.kind,
+                  base_url: r.base_url,
+                  auth_type: r.auth_type,
+                  auth_name: r.auth_name,
+                  tools: r.tools,
+                  enabled: r.enabled,
+                  secret: r.secret,
+                }));
+                connectorTools = buildConnectorFunctionTools(connectorRows);
+              }
+            } catch {
+              /* konektor opsional — agent tetap jalan tanpanya */
+            }
+            const allTools = [...TOOLS, ...connectorTools];
+
             async function callModel(
               convo: ChatMsg[],
               withTools: boolean,
@@ -406,7 +442,7 @@ export const Route = createFileRoute("/api/agent")({
                 stream: false,
               };
               if (withTools) {
-                payload.tools = TOOLS;
+                payload.tools = allTools;
                 payload.tool_choice = "auto";
               }
               const res = await fetch(url, {
@@ -446,8 +482,18 @@ export const Route = createFileRoute("/api/agent")({
             }
 
             try {
+              let systemPrompt = AGENT_SYSTEM;
+              if (connectorRows.length > 0) {
+                const lines = connectorRows.map((r) => {
+                  const tools = (r.tools ?? []).map((t) => t.name).join(", ") || "—";
+                  return `- ${r.name} (${r.kind}): ${tools}`;
+                });
+                systemPrompt += `\n\nKonektor aktif (panggil via tool konektor_<nama>__<tool>):
+${lines.join("\n")}
+Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan pernah meminta atau menampilkan secret/API key — autentikasi sudah ditangani server.`;
+              }
               const convo: ChatMsg[] = [
-                { role: "system", content: AGENT_SYSTEM },
+                { role: "system", content: systemPrompt },
                 ...messages.map((m) => ({ role: m.role, content: m.content })),
               ];
 
@@ -669,6 +715,31 @@ export const Route = createFileRoute("/api/agent")({
                         ? `${output} (file sudah dikirim ke user sebagai download)`
                         : output,
                     });
+                  } else if (tc.name.startsWith("konektor_")) {
+                    const parsed = parseToolFunctionName(tc.name);
+                    const row = parsed
+                      ? connectorRows.find((r) => connectorSlug(r.name) === parsed.connSlug)
+                      : undefined;
+                    send({
+                      type: "tool_call",
+                      kind: "sandbox",
+                      command: `[konektor] ${row?.name ?? parsed?.connSlug ?? "?"} → ${parsed?.tool ?? tc.name}`,
+                    });
+                    if (!row) {
+                      const output = `Konektor tidak ditemukan/aktif: ${tc.name}`;
+                      send({ type: "tool_result", output, exitCode: 1 });
+                      convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                    } else {
+                      const outcome = await executeConnectorTool(
+                        row,
+                        parsed!.tool,
+                        args,
+                        row.secret,
+                      );
+                      const output = clip(outcome.text);
+                      send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
+                      convo.push({ role: "tool", tool_call_id: tc.id, content: output });
+                    }
                   } else {
                     convo.push({
                       role: "tool",

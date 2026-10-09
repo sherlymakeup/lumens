@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectionRouteImport } from './routes/connection'
+import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
+import { Route as ApiConnectionsRouteImport } from './routes/api/connections'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiImagesRouteImport } from './routes/api/images'
@@ -24,7 +26,9 @@ import { Route as EnginesContentRouteImport } from './routes/engines/content'
 import { Route as EnginesDesignRouteImport } from './routes/engines/design'
 import { Route as EnginesPrototypeRouteImport } from './routes/engines/prototype'
 import { Route as ApiAgentUploadRouteImport } from './routes/api/agent/upload'
+import { Route as ApiConnectionsIdRouteImport } from './routes/api/connections.$id'
 import { Route as ApiSandboxExecuteRouteImport } from './routes/api/sandbox/execute'
+import { Route as ApiConnectionsIdTestRouteImport } from './routes/api/connections.$id.test'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
 const ConnectionRoute = ConnectionRouteImport.update({
   id: '/connection',
   path: '/connection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectorsRoute = ConnectorsRouteImport.update({
+  id: '/connectors',
+  path: '/connectors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -49,6 +58,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
 const ApiAgentRoute = ApiAgentRouteImport.update({
   id: '/api/agent',
   path: '/api/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConnectionsRoute = ApiConnectionsRouteImport.update({
+  id: '/api/connections',
+  path: '/api/connections',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -101,18 +115,30 @@ const ApiAgentUploadRoute = ApiAgentUploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => ApiAgentRoute,
 } as any)
+const ApiConnectionsIdRoute = ApiConnectionsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiConnectionsRoute,
+} as any)
 const ApiSandboxExecuteRoute = ApiSandboxExecuteRouteImport.update({
   id: '/api/sandbox/execute',
   path: '/api/sandbox/execute',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConnectionsIdTestRoute = ApiConnectionsIdTestRouteImport.update({
+  id: '/test',
+  path: '/test',
+  getParentRoute: () => ApiConnectionsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/connection': typeof ConnectionRoute
+  '/connectors': typeof ConnectorsRoute
   '/dashboard': typeof DashboardRoute
   '/projects': typeof ProjectsRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
+  '/api/connections': typeof ApiConnectionsRouteWithChildren
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -123,14 +149,18 @@ export interface FileRoutesByFullPath {
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
   '/api/agent/upload': typeof ApiAgentUploadRoute
+  '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
+  '/api/connections/$id/test': typeof ApiConnectionsIdTestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/connection': typeof ConnectionRoute
+  '/connectors': typeof ConnectorsRoute
   '/dashboard': typeof DashboardRoute
   '/projects': typeof ProjectsRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
+  '/api/connections': typeof ApiConnectionsRouteWithChildren
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -141,15 +171,19 @@ export interface FileRoutesByTo {
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
   '/api/agent/upload': typeof ApiAgentUploadRoute
+  '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
+  '/api/connections/$id/test': typeof ApiConnectionsIdTestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/connection': typeof ConnectionRoute
+  '/connectors': typeof ConnectorsRoute
   '/dashboard': typeof DashboardRoute
   '/projects': typeof ProjectsRoute
   '/api/agent': typeof ApiAgentRouteWithChildren
+  '/api/connections': typeof ApiConnectionsRouteWithChildren
   '/api/generate': typeof ApiGenerateRoute
   '/api/health': typeof ApiHealthRoute
   '/api/images': typeof ApiImagesRoute
@@ -160,16 +194,20 @@ export interface FileRoutesById {
   '/engines/design': typeof EnginesDesignRoute
   '/engines/prototype': typeof EnginesPrototypeRoute
   '/api/agent/upload': typeof ApiAgentUploadRoute
+  '/api/connections/$id': typeof ApiConnectionsIdRouteWithChildren
   '/api/sandbox/execute': typeof ApiSandboxExecuteRoute
+  '/api/connections/$id/test': typeof ApiConnectionsIdTestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/connection'
+    | '/connectors'
     | '/dashboard'
     | '/projects'
     | '/api/agent'
+    | '/api/connections'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
@@ -180,14 +218,18 @@ export interface FileRouteTypes {
     | '/engines/design'
     | '/engines/prototype'
     | '/api/agent/upload'
+    | '/api/connections/$id'
     | '/api/sandbox/execute'
+    | '/api/connections/$id/test'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/connection'
+    | '/connectors'
     | '/dashboard'
     | '/projects'
     | '/api/agent'
+    | '/api/connections'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
@@ -198,14 +240,18 @@ export interface FileRouteTypes {
     | '/engines/design'
     | '/engines/prototype'
     | '/api/agent/upload'
+    | '/api/connections/$id'
     | '/api/sandbox/execute'
+    | '/api/connections/$id/test'
   id:
     | '__root__'
     | '/'
     | '/connection'
+    | '/connectors'
     | '/dashboard'
     | '/projects'
     | '/api/agent'
+    | '/api/connections'
     | '/api/generate'
     | '/api/health'
     | '/api/images'
@@ -216,15 +262,19 @@ export interface FileRouteTypes {
     | '/engines/design'
     | '/engines/prototype'
     | '/api/agent/upload'
+    | '/api/connections/$id'
     | '/api/sandbox/execute'
+    | '/api/connections/$id/test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConnectionRoute: typeof ConnectionRoute
+  ConnectorsRoute: typeof ConnectorsRoute
   DashboardRoute: typeof DashboardRoute
   ProjectsRoute: typeof ProjectsRoute
   ApiAgentRoute: typeof ApiAgentRouteWithChildren
+  ApiConnectionsRoute: typeof ApiConnectionsRouteWithChildren
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImagesRoute: typeof ApiImagesRoute
@@ -253,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/connectors': {
+      id: '/connectors'
+      path: '/connectors'
+      fullPath: '/connectors'
+      preLoaderRoute: typeof ConnectorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -272,6 +329,13 @@ declare module '@tanstack/react-router' {
       path: '/api/agent'
       fullPath: '/api/agent'
       preLoaderRoute: typeof ApiAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/connections': {
+      id: '/api/connections'
+      path: '/api/connections'
+      fullPath: '/api/connections'
+      preLoaderRoute: typeof ApiConnectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -344,12 +408,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentUploadRouteImport
       parentRoute: typeof ApiAgentRoute
     }
+    '/api/connections/$id': {
+      id: '/api/connections/$id'
+      path: '/$id'
+      fullPath: '/api/connections/$id'
+      preLoaderRoute: typeof ApiConnectionsIdRouteImport
+      parentRoute: typeof ApiConnectionsRoute
+    }
     '/api/sandbox/execute': {
       id: '/api/sandbox/execute'
       path: '/api/sandbox/execute'
       fullPath: '/api/sandbox/execute'
       preLoaderRoute: typeof ApiSandboxExecuteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/connections/$id/test': {
+      id: '/api/connections/$id/test'
+      path: '/test'
+      fullPath: '/api/connections/$id/test'
+      preLoaderRoute: typeof ApiConnectionsIdTestRouteImport
+      parentRoute: typeof ApiConnectionsIdRoute
     }
   }
 }
@@ -366,12 +444,37 @@ const ApiAgentRouteWithChildren = ApiAgentRoute._addFileChildren(
   ApiAgentRouteChildren,
 )
 
+interface ApiConnectionsIdRouteChildren {
+  ApiConnectionsIdTestRoute: typeof ApiConnectionsIdTestRoute
+}
+
+const ApiConnectionsIdRouteChildren: ApiConnectionsIdRouteChildren = {
+  ApiConnectionsIdTestRoute: ApiConnectionsIdTestRoute,
+}
+
+const ApiConnectionsIdRouteWithChildren =
+  ApiConnectionsIdRoute._addFileChildren(ApiConnectionsIdRouteChildren)
+
+interface ApiConnectionsRouteChildren {
+  ApiConnectionsIdRoute: typeof ApiConnectionsIdRouteWithChildren
+}
+
+const ApiConnectionsRouteChildren: ApiConnectionsRouteChildren = {
+  ApiConnectionsIdRoute: ApiConnectionsIdRouteWithChildren,
+}
+
+const ApiConnectionsRouteWithChildren = ApiConnectionsRoute._addFileChildren(
+  ApiConnectionsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConnectionRoute: ConnectionRoute,
+  ConnectorsRoute: ConnectorsRoute,
   DashboardRoute: DashboardRoute,
   ProjectsRoute: ProjectsRoute,
   ApiAgentRoute: ApiAgentRouteWithChildren,
+  ApiConnectionsRoute: ApiConnectionsRouteWithChildren,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImagesRoute: ApiImagesRoute,
