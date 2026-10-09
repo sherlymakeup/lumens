@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { generateAgent, generateStream } from "@/lib/generate";
 import { resolveAgentSandboxId } from "@/lib/agent-upload";
 import { extrasInstruction, MODE_BY_ID, defaultExtras } from "@/lib/modes";
 import { useStudio } from "@/lib/store";
+import { useStrings } from "@/lib/i18n";
 import { applyDensity, applyFontSize, applyTheme } from "@/lib/theme";
 import type { ChatAttachment, ChatMessage } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -14,8 +14,10 @@ import { Header } from "./header";
 import { MessageList } from "./messages";
 import { SettingsPanel } from "./settings";
 import { Sidebar } from "./sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 
 export function Studio() {
+  const t = useStrings();
   const setHydrated = useStudio((s) => s.setHydrated);
   const settings = useStudio((s) => s.settings);
   const modeId = useStudio((s) => s.modeId);
@@ -220,7 +222,7 @@ export function Studio() {
     const current = useStudio.getState().settings;
     if (!current.model.trim()) {
       useStudio.getState().setSettingsOpen(true);
-      toast.error("Pilih model di Settings dulu.");
+      toast.error(t["sh.chooseModelFirst"]);
       return;
     }
 
@@ -259,7 +261,7 @@ export function Studio() {
     setUploadSandboxId(null);
 
     const mode = MODE_BY_ID[conv.modeId];
-    const extra = extrasInstruction(conv.modeId, conv.extras);
+    const extra = extrasInstruction(conv.modeId, conv.extras, t);
     const override = settings.systemPromptOverride.trim();
     const system = [mode.system, extra, override].filter(Boolean).join("\n\n");
 
@@ -344,11 +346,7 @@ export function Studio() {
       <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
         <Sidebar />
       </aside>
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" title="Menus" className="p-0 max-w-72">
-          <Sidebar />
-        </SheetContent>
-      </Sheet>
+      <MobileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"

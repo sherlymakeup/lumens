@@ -270,9 +270,9 @@ export function SettingsPanel({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="dark">Dark</SelectItem>
-                        <SelectItem value="light">Light</SelectItem>
-                        <SelectItem value="system">System</SelectItem>
+                        <SelectItem value="dark">{t["settings.themeDark"]}</SelectItem>
+                        <SelectItem value="light">{t["settings.themeLight"]}</SelectItem>
+                        <SelectItem value="system">{t["settings.themeSystem"]}</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -287,9 +287,9 @@ export function SettingsPanel({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="sm">Small</SelectItem>
-                        <SelectItem value="md">Medium</SelectItem>
-                        <SelectItem value="lg">Large</SelectItem>
+                        <SelectItem value="sm">{t["settings.sizeSmall"]}</SelectItem>
+                        <SelectItem value="md">{t["settings.sizeMedium"]}</SelectItem>
+                        <SelectItem value="lg">{t["settings.sizeLarge"]}</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -304,8 +304,8 @@ export function SettingsPanel({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="comfortable">Comfortable</SelectItem>
-                        <SelectItem value="compact">Compact</SelectItem>
+                        <SelectItem value="comfortable">{t["settings.densityComfortable"]}</SelectItem>
+                        <SelectItem value="compact">{t["settings.densityCompact"]}</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -384,8 +384,9 @@ export function SettingsPanel({
                     <Button
                       variant="outline"
                       onClick={() => {
+                        if (!window.confirm(t["settings.confirmClearAll"])) return;
                         clearAll();
-                        toast.success("Drafts cleared");
+                        toast.success(t["settings.draftsCleared"]);
                       }}
                     >
                       Clear drafts
@@ -394,7 +395,7 @@ export function SettingsPanel({
                       variant="ghost"
                       onClick={() => {
                         resetSettings();
-                        toast.success("Settings reset");
+                        toast.success(t["settings.settingsReset"]);
                       }}
                     >
                       Reset settings

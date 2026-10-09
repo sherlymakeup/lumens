@@ -278,7 +278,3 @@ export const useStudio = create<StudioState>()(
   ),
 );
 
-export function activeConversation() {
-  const { conversations, activeId } = useStudio.getState();
-  return conversations.find((item) => item.id === activeId) ?? null;
-}

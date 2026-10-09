@@ -1,3 +1,4 @@
+import type { StringKey } from "./i18n";
 export type Provider = "custom";
 export type ThemeMode = "dark" | "light" | "system";
 export type FontSize = "sm" | "md" | "lg";
@@ -19,8 +20,8 @@ export type ModeId =
 
 export type ExtraField = {
   key: string;
-  label: string;
-  options: { value: string; label: string }[];
+  label: StringKey;
+  options: { value: string; label: StringKey }[];
   defaultValue: string;
 };
 

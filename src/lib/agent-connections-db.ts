@@ -213,8 +213,8 @@ export async function createConnection(
     };
   }
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    return { ok: false, text: `Simpan koneksi error ${res.status}: ${detail.slice(0, 200)}` };
+    // Jangan teruskan raw error DB ke client (info disclosure)
+    return { ok: false, text: `Simpan koneksi error ${res.status}.` };
   }
   const rows = (await res.json().catch(() => [])) as Record<string, unknown>[];
   if (!rows[0]) return { ok: false, text: "Simpan koneksi gagal (tanpa hasil)." };

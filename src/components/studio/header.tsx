@@ -78,8 +78,8 @@ export function Header({ models }: { models: string[] }) {
         <Menu className="size-5" />
       </Button>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{mode.label}</div>
-        <div className="truncate text-[11px] text-muted-foreground">{mode.hint}</div>
+        <div className="truncate text-sm font-medium">{t[mode.label]}</div>
+        <div className="truncate text-[11px] text-muted-foreground">{t[mode.hint]}</div>
       </div>
       <HealthChip />
       {options.length > 0 ? (

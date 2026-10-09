@@ -151,9 +151,9 @@ export function Sidebar({ className }: { className?: string }) {
                 )}
               >
                 <Icon className="size-4 shrink-0" strokeWidth={1.7} />
-                <span className="min-w-0 flex-1 truncate">{mode.label}</span>
+                <span className="min-w-0 flex-1 truncate">{t[mode.label]}</span>
                 <span className="hidden text-[11px] text-muted-foreground lg:inline">
-                  {mode.hint}
+                  {t[mode.hint]}
                 </span>
               </button>
             );
@@ -209,15 +209,17 @@ export function Sidebar({ className }: { className?: string }) {
                     setEditingId(item.id);
                     setEditingTitle(item.title);
                   }}
-                  className="rounded-md p-2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  className="rounded-md p-2 text-muted-foreground transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100"
                 >
                   <Pencil className="size-3.5" />
                 </button>
                 <button
                   type="button"
                   aria-label="Delete draft"
-                  onClick={() => deleteConversation(item.id)}
-                  className="rounded-md p-2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                  onClick={() => {
+                    if (window.confirm("Hapus percakapan ini?")) deleteConversation(item.id);
+                  }}
+                  className="rounded-md p-2 text-muted-foreground transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100"
                 >
                   <Trash2 className="size-3.5" />
                 </button>

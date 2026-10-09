@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchModels, testModelConnection } from "@/lib/generate";
 import { useStrings } from "@/lib/i18n";
@@ -18,6 +17,7 @@ import type { EngineId } from "@/lib/types";
 import { ENGINE_IDS, ENGINE_LABELS } from "@/lib/types";
 import { PageBar } from "./header";
 import { Sidebar } from "./sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 
 type TestState = "idle" | "testing" | "ok" | "error";
 
@@ -48,7 +48,7 @@ export function Connection() {
       setChatModels(chat);
       setImageModels(image);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Gagal memuat daftar model.");
+      setLoadError(error instanceof Error ? error.message : t["conn.loadFailed"]);
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export function Connection() {
       setNewId("");
     } catch (error) {
       setTestState("error");
-      setTestMessage(error instanceof Error ? error.message : "Test koneksi gagal.");
+      setTestMessage(error instanceof Error ? error.message : t["conn.testFailed"]);
     }
   }
 
@@ -87,11 +87,7 @@ export function Connection() {
       <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
         <Sidebar />
       </aside>
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" title="Menus" className="p-0 max-w-72">
-          <Sidebar />
-        </SheetContent>
-      </Sheet>
+      <MobileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <PageBar title={t["conn.title"]} />

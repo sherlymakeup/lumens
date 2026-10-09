@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { assertPublicConnectorUrl } from "@/lib/agent-connectors.ts";
+import { validateConnectionPayload } from "@/lib/connection-validation.ts";
 import {
   connectionEnv,
   deleteConnection,
+  getConnectionFull,
+  listConnections,
   updateConnection,
 } from "@/lib/agent-connections-db.ts";
 
@@ -50,22 +52,52 @@ export const Route = createFileRoute("/api/connections/$id")({
         } catch {
           return Response.json({ error: "Body tidak valid." }, { status: 400 });
         }
+        // Validasi gabungan (paritas dengan POST): slug unik, URL publik,
+        // auth_name wajib, tool unik — dengan excludeId agar nama sendiri lolos.
+        const existing = await listConnections(env);
+        const v = validateConnectionPayload(
+          {
+            name: parsed.name?.trim(),
+            base_url: parsed.base_url?.trim(),
+            auth_type: parsed.auth_type,
+            auth_name: parsed.auth_name?.trim(),
+            tools: parsed.tools?.map((t) => ({ name: t.name })),
+          },
+          existing.ok ? existing.items : [],
+          params.id,
+        );
+        if (!v.ok) {
+          return Response.json({ error: v.error }, { status: 400 });
+        }
+        // Tolak secret tanpa auth (finding audit #20)
+        if (parsed.auth_type === "none" && parsed.auth_secret) {
+          return Response.json(
+            { error: "auth_secret tidak dipakai saat tipe auth 'none'." },
+            { status: 400 },
+          );
+        }
+        // H1 mitigation: mengganti base_url menghapus secret tersimpan.
+        // Tanpa ini, pihak ketiga bisa mengarahkan secret ke server miliknya
+        // lewat PATCH base_url (app tanpa auth).
+        let secretCleared = false;
         if (parsed.base_url) {
-          try {
-            assertPublicConnectorUrl(parsed.base_url);
-          } catch (error) {
-            return Response.json(
-              { error: error instanceof Error ? error.message : "URL tidak valid." },
-              { status: 400 },
-            );
+          const current = await getConnectionFull(env, params.id);
+          if (current.ok && current.row?.auth_secret && !parsed.auth_secret) {
+            const norm = (u: string) => u.trim().replace(/\/$/, "");
+            if (norm(current.row.base_url) !== norm(parsed.base_url)) {
+              secretCleared = true;
+            }
           }
         }
+        // Menonaktifkan auth juga menghapus secret yang tidak terpakai.
+        const clearSecret = secretCleared || parsed.clear_secret || parsed.auth_type === "none";
         const r = await updateConnection(env, params.id, {
           ...parsed,
           name: parsed.name?.trim(),
           base_url: parsed.base_url?.trim(),
           auth_name: parsed.auth_name?.trim(),
           auth_secret: parsed.auth_secret || undefined,
+          clear_secret: clearSecret || undefined,
           tools: parsed.tools?.map((t) => ({
             name: t.name,
             description: t.description,
@@ -75,7 +107,12 @@ export const Route = createFileRoute("/api/connections/$id")({
           })),
         });
         if (!r.ok) return Response.json({ error: r.text }, { status: 500 });
-        return Response.json({ connection: r.item });
+        return Response.json({
+          connection: r.item,
+          ...(secretCleared
+            ? { note: "Base URL berubah — secret lama dihapus, masukkan secret baru." }
+            : {}),
+        });
       },
       DELETE: async ({ params }) => {
         const env = connectionEnv();

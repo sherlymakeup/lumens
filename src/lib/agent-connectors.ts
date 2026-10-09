@@ -119,6 +119,26 @@ export type HttpCall = {
 };
 
 /**
+ * Validasi argumen model terhadap schema tool.
+ * Dipakai HTTP (via buildHttpCall) dan MCP (langsung) agar konsisten.
+ */
+export function validateToolArgs(
+  tool: Pick<ConnectorToolDef, "name" | "params">,
+  args: Record<string, unknown>,
+): void {
+  const schema = tool.params ?? {};
+  const unknownKeys = Object.keys(args ?? {}).filter((k) => !(k in schema));
+  if (unknownKeys.length > 0) {
+    throw new Error(`Parameter tidak dikenal: ${unknownKeys.join(", ")}`);
+  }
+  for (const [pName, pDef] of Object.entries(schema)) {
+    if (pDef.required && (args?.[pName] === undefined || args?.[pName] === null || args?.[pName] === "")) {
+      throw new Error(`Parameter wajib hilang: ${pName}`);
+    }
+  }
+}
+
+/**
  * Bangun HTTP request dari definisi tool + argumen model.
  * - {param} di path disubstitusi dari args (wajib ada).
  * - Sisa args yang terdaftar di schema: query string (GET/DELETE) atau JSON body.
@@ -130,16 +150,8 @@ export function buildHttpCall(
   args: Record<string, unknown>,
   secret: string | null | undefined,
 ): HttpCall {
+  validateToolArgs(tool, args);
   const schema = tool.params ?? {};
-  const unknownKeys = Object.keys(args ?? {}).filter((k) => !(k in schema));
-  if (unknownKeys.length > 0) {
-    throw new Error(`Parameter tidak dikenal: ${unknownKeys.join(", ")}`);
-  }
-  for (const [pName, pDef] of Object.entries(schema)) {
-    if (pDef.required && (args?.[pName] === undefined || args?.[pName] === null || args?.[pName] === "")) {
-      throw new Error(`Parameter wajib hilang: ${pName}`);
-    }
-  }
 
   const base = assertPublicConnectorUrl(conn.base_url);
   let path = tool.path || "/";
@@ -290,17 +302,30 @@ export async function executeConnectorTool(
 
   try {
     if (conn.kind === "mcp") {
+      // Validasi schema juga berlaku untuk MCP (konsisten dengan HTTP)
+      try {
+        validateToolArgs(tool, args ?? {});
+      } catch (error) {
+        return {
+          ok: false,
+          text: error instanceof Error ? error.message : "Argumen tidak valid.",
+        };
+      }
       const url = assertPublicConnectorUrl(conn.base_url);
-      const res = await fetchFn(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "lumens-connector/1.0",
-          ...connectorAuthHeaders(conn, secret),
+      const res = await fetchPublicUrl(
+        url,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "lumens-connector/1.0",
+            ...connectorAuthHeaders(conn, secret),
+          },
+          body: JSON.stringify(mcpCallToolPayload(tool.name, args ?? {})),
+          signal: AbortSignal.timeout(30_000),
         },
-        body: JSON.stringify(mcpCallToolPayload(tool.name, args ?? {})),
-        signal: AbortSignal.timeout(30_000),
-      });
+        fetchFn,
+      );
       const body = await res.text().catch(() => "");
       if (!res.ok) return { ok: false, text: `MCP error ${res.status}: ${clipConnectorOutput(body, 500)}` };
       const json = JSON.parse(body) as {
@@ -317,12 +342,16 @@ export async function executeConnectorTool(
 
     // kind=http
     const call = buildHttpCall(conn, tool, args ?? {}, secret);
-    const res = await fetchFn(call.url, {
-      method: call.method,
-      headers: call.headers,
-      body: call.body,
-      signal: AbortSignal.timeout(30_000),
-    });
+    const res = await fetchPublicUrl(
+      call.url,
+      {
+        method: call.method,
+        headers: call.headers,
+        body: call.body,
+        signal: AbortSignal.timeout(30_000),
+      },
+      fetchFn,
+    );
     const body = await res.text().catch(() => "");
     if (!res.ok) {
       return { ok: false, text: `HTTP ${res.status}: ${clipConnectorOutput(body, 500)}` };
@@ -386,12 +415,16 @@ export async function discoverMcpTools(
     ...connectorAuthHeaders({ auth_type: authType, auth_name: authName }, secret),
   };
   const post = async (body: unknown) => {
-    const res = await fetchFn(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
-    });
+    const res = await fetchPublicUrl(
+      url,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
+      },
+      fetchFn,
+    );
     const text = await res.text().catch(() => "");
     if (!res.ok) throw new Error(`MCP HTTP ${res.status}: ${text.slice(0, 200)}`);
     const msg = parseMcpMessage(text);
@@ -426,4 +459,36 @@ export async function discoverMcpTools(
       text: `Discovery MCP gagal: ${error instanceof Error ? error.message : String(error)}`.slice(0, 500),
     };
   }
+}
+
+/**
+ * Fetch dengan proteksi redirect-SSRF: setiap hop (termasuk Location relatif)
+ * divalidasi sebagai URL https publik sebelum diikuti. Maks 3 redirect.
+ */
+export async function fetchPublicUrl(
+  rawUrl: string,
+  init: RequestInit = {},
+  fetchFn: typeof fetch = fetch,
+  maxRedirects = 3,
+): Promise<Response> {
+  let current = assertPublicConnectorUrl(rawUrl);
+  for (let i = 0; i <= maxRedirects; i++) {
+    const res = await fetchFn(current, { ...init, redirect: "manual" });
+    const status = res.status;
+    if (status >= 300 && status < 400) {
+      const location =
+        typeof res.headers?.get === "function" ? res.headers.get("location") : null;
+      // Bebaskan koneksi sebelum hop berikutnya
+      try {
+        await res.arrayBuffer();
+      } catch { /* abaikan */ }
+      if (!location) throw new Error("Redirect tanpa header Location.");
+      if (i === maxRedirects) throw new Error("Terlalu banyak redirect.");
+      // Validasi hop berikutnya SEBELUM request dikirim
+      current = assertPublicConnectorUrl(new URL(location, current).toString());
+      continue;
+    }
+    return res;
+  }
+  throw new Error("Terlalu banyak redirect.");
 }

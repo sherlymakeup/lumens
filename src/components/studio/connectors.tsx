@@ -59,6 +59,7 @@ export function Connectors() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,16 +111,16 @@ export function Connectors() {
     if (!raw) return { ok: true, tools: [] };
     try {
       const arr = JSON.parse(raw) as unknown;
-      if (!Array.isArray(arr)) return { ok: false, error: "Tools harus array JSON." };
+      if (!Array.isArray(arr)) return { ok: false, error: t["ctr.toolsNotArray"] };
       return { ok: true, tools: arr };
     } catch {
-      return { ok: false, error: "JSON tools tidak valid." };
+      return { ok: false, error: t["ctr.toolsInvalidJson"] };
     }
   }
 
   async function save() {
     if (!form.name.trim() || !form.base_url.trim()) {
-      toast.error("Nama dan Base URL wajib diisi.");
+      toast.error(t["ctr.nameRequired"]);
       return;
     }
     const parsed = parseTools();
@@ -134,9 +135,15 @@ export function Connectors() {
         kind: form.kind,
         base_url: form.base_url.trim(),
         auth_type: form.auth_type,
-        tools: parsed.tools,
         enabled: editing ? editing.enabled : true,
       };
+      // MCP: tools terisi otomatis via Test/discovery — jangan kirim JSON basi.
+      // HTTP: kirim definisi tools; PATCH tanpa tools = biarkan yang ada.
+      if (form.kind === "http") {
+        body.tools = parsed.tools;
+      } else if (!editing) {
+        body.tools = [];
+      }
       if (form.auth_name.trim()) body.auth_name = form.auth_name.trim();
       if (form.auth_secret) body.auth_secret = form.auth_secret;
       const url = editing ? `/api/connections/${editing.id}` : "/api/connections";
@@ -145,13 +152,17 @@ export function Connectors() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const out = (await res.json().catch(() => null)) as { error?: string } | null;
+      const out = (await res.json().catch(() => null)) as {
+        error?: string;
+        note?: string;
+      } | null;
       if (!res.ok) throw new Error(out?.error ?? "gagal");
       toast.success(t["ctr.saved"]);
+      if (out?.note) toast.info(t["ctr.secretClearedNote"]);
       setShowForm(false);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal menyimpan.");
+      toast.error(error instanceof Error ? error.message : t["ctr.saveFailed"]);
     } finally {
       setSaving(false);
     }
@@ -177,13 +188,15 @@ export function Connectors() {
       toast.success(`${t["ctr.testOk"]}${extra}`);
       await load(); // tools MCP hasil discovery tersimpan
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Test gagal.");
+      toast.error(error instanceof Error ? error.message : t["ctr.testFailed"]);
     } finally {
       setTestingId(null);
     }
   }
 
   async function toggleEnabled(c: Connection) {
+    if (togglingId) return;
+    setTogglingId(c.id);
     try {
       const res = await fetch(`/api/connections/${c.id}`, {
         method: "PATCH",
@@ -193,7 +206,9 @@ export function Connectors() {
       if (!res.ok) throw new Error("gagal");
       await load();
     } catch {
-      toast.error("Gagal mengubah status.");
+      toast.error(t["ctr.toggleFailed"]);
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -205,7 +220,7 @@ export function Connectors() {
       toast.success(t["ctr.deleted"]);
       await load();
     } catch {
-      toast.error("Gagal menghapus.");
+      toast.error(t["ctr.deleteFailed"]);
     }
   }
 
@@ -241,6 +256,7 @@ export function Connectors() {
               <button
                 type="button"
                 onClick={() => void toggleEnabled(c)}
+                disabled={togglingId === c.id}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
                   c.enabled
                     ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
@@ -267,7 +283,7 @@ export function Connectors() {
                 <FlaskConical className="size-3.5" />
                 {testingId === c.id ? t["ctr.testing"] : t["ctr.test"]}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="gap-1">
+              <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="gap-1" aria-label={t["ctr.editTitle"]} title={t["ctr.editTitle"]}>
                 <Pencil className="size-3.5" />
               </Button>
               <Button
@@ -275,6 +291,7 @@ export function Connectors() {
                 size="sm"
                 onClick={() => void remove(c.id)}
                 className="gap-1 text-red-500 hover:text-red-600"
+                aria-label={t["ctr.delete"]} title={t["ctr.delete"]}
               >
                 <Trash2 className="size-3.5" />
               </Button>
@@ -286,7 +303,7 @@ export function Connectors() {
       {showForm && (
         <div className="mt-4 rounded-xl border border-border bg-card p-4">
           <h2 className="mb-3 font-medium">
-            {editing ? `${t["ctr.addTitle"]} — ${editing.name}` : t["ctr.addTitle"]}
+            {editing ? `${t["ctr.editTitle"]} — ${editing.name}` : t["ctr.addTitle"]}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
@@ -339,6 +356,11 @@ export function Connectors() {
                 />
               </label>
             )}
+            {form.auth_type === "query" && (
+              <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                {t["ctr.queryAuthWarning"]}
+              </p>
+            )}
             {form.auth_type !== "none" && (
               <label className="block sm:col-span-2">
                 <span className="mb-1 block text-xs text-muted-foreground">{t["ctr.authSecret"]}</span>
@@ -380,7 +402,7 @@ export function Connectors() {
               {t["ctr.cancel"]}
             </Button>
             <Button onClick={() => void save()} disabled={saving}>
-              {t["ctr.save"]}
+              {saving ? t["ctr.saving"] : t["ctr.save"]}
             </Button>
           </div>
         </div>

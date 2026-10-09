@@ -8,7 +8,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { checkHealth, fetchModels, type HealthStatus } from "@/lib/generate";
 import { useStrings } from "@/lib/i18n";
@@ -16,6 +15,7 @@ import { useStudio } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { PageBar } from "./header";
 import { Sidebar } from "./sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 
 const ENGINES = [
   { id: "content", to: "/engines/content", nameKey: "eng.contentTitle", descKey: "eng.contentSubtitle", glyph: "C" },
@@ -89,11 +89,7 @@ export function Dashboard() {
       <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
         <Sidebar />
       </aside>
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" title="Menus" className="p-0 max-w-72">
-          <Sidebar />
-        </SheetContent>
-      </Sheet>
+      <MobileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <PageBar title={t["dash.title"]} />

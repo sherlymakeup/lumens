@@ -17,8 +17,12 @@ export type FetchedFile = {
   size: number;
 };
 
-const MIME_BY_EXT: Record<string, string> = {
-  md: "text/markdown",
+/** Quote shell agar path dengan spasi/karakter khusus aman. */
+function shellQuote(s: string): string {
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
+const MIME_BY_EXT: Record<string, string> = {  md: "text/markdown",
   markdown: "text/markdown",
   txt: "text/plain",
   csv: "text/csv",
@@ -69,7 +73,7 @@ export async function fetchSandboxFile(
   }
   let stat: { stdout: string; stderr: string; exitCode: number };
   try {
-    stat = await exec(`stat -c%s -- ${path}`);
+    stat = await exec(`stat -c%s -- ${shellQuote(path)}`);
   } catch (error) {
     return {
       ok: false,
@@ -91,7 +95,7 @@ export async function fetchSandboxFile(
   }
   let out: { stdout: string; stderr: string; exitCode: number };
   try {
-    out = await exec(`base64 -w0 -- ${path}`);
+    out = await exec(`base64 -w0 -- ${shellQuote(path)}`);
   } catch (error) {
     return {
       ok: false,

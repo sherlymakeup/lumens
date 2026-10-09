@@ -4,6 +4,7 @@ import {
   assertPublicConnectorUrl,
   type ConnectorToolDef,
 } from "@/lib/agent-connectors.ts";
+import { validateConnectionPayload } from "@/lib/connection-validation.ts";
 import {
   connectionEnv,
   createConnection,
@@ -58,21 +59,24 @@ export const Route = createFileRoute("/api/connections")({
         } catch {
           return Response.json({ error: "Body tidak valid." }, { status: 400 });
         }
-        // Fail fast: URL harus https publik
-        try {
-          assertPublicConnectorUrl(parsed.base_url);
-        } catch (error) {
-          return Response.json(
-            { error: error instanceof Error ? error.message : "URL tidak valid." },
-            { status: 400 },
-          );
+        // Validasi gabungan (slug unik, URL publik, auth_name, tool unik)
+        const existing = await listConnections(env);
+        const v = validateConnectionPayload(
+          {
+            name: parsed.name.trim(),
+            base_url: parsed.base_url.trim(),
+            auth_type: parsed.auth_type,
+            auth_name: parsed.auth_name?.trim(),
+            tools: (parsed.tools ?? []).map((t) => ({ name: t.name })),
+          },
+          existing.ok ? existing.items : [],
+        );
+        if (!v.ok) {
+          return Response.json({ error: v.error }, { status: 400 });
         }
-        if (
-          (parsed.auth_type === "header" || parsed.auth_type === "query") &&
-          !parsed.auth_name?.trim()
-        ) {
+        if (parsed.auth_type === "none" && parsed.auth_secret) {
           return Response.json(
-            { error: "auth_name wajib diisi untuk tipe auth header/query." },
+            { error: "auth_secret tidak dipakai saat tipe auth 'none'." },
             { status: 400 },
           );
         }
@@ -83,18 +87,6 @@ export const Route = createFileRoute("/api/connections")({
           path: t.path,
           params: t.params,
         }));
-        // Normalisasi nama tool agar aman dipakai sebagai function name
-        const seen = new Set<string>();
-        for (const t of tools) {
-          const slug = t.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-          if (!slug || seen.has(slug)) {
-            return Response.json(
-              { error: `Nama tool tidak valid/duplikat: ${t.name}` },
-              { status: 400 },
-            );
-          }
-          seen.add(slug);
-        }
         const r = await createConnection(env, {
           name: parsed.name.trim(),
           kind: parsed.kind,

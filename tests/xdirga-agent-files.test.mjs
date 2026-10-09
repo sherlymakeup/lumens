@@ -8,14 +8,16 @@ import {
   guessMime,
 } from "../src/lib/agent-files.ts";
 
+const unquote = (p) => (p.startsWith("'") && p.endsWith("'") ? p.slice(1, -1).replace(/'\\''/g, "'") : p);
+
 const okExec = (files) => async (cmd) => {
   if (cmd.startsWith("stat ")) {
-    const p = cmd.split("-- ")[1];
+    const p = unquote(cmd.split("-- ")[1]);
     if (!(p in files)) return { stdout: "", stderr: "no such file", exitCode: 1 };
     return { stdout: String(Buffer.byteLength(files[p], "utf8")), stderr: "", exitCode: 0 };
   }
   if (cmd.startsWith("base64 ")) {
-    const p = cmd.split("-- ")[1];
+    const p = unquote(cmd.split("-- ")[1]);
     return {
       stdout: Buffer.from(files[p], "utf8").toString("base64"),
       stderr: "",

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { discoverMcpTools } from "@/lib/agent-connectors.ts";
+import { discoverMcpTools, fetchPublicUrl } from "@/lib/agent-connectors.ts";
 import {
   connectionEnv,
   getConnectionFull,
@@ -39,19 +39,23 @@ export const Route = createFileRoute("/api/connections/$id/test")({
             return Response.json({ ok: false, error: discovered.text }, { status: 502 });
           }
           // Simpan hasil discovery agar agent tidak perlu discovery tiap request
-          await updateConnection(env, row.id, { tools: discovered.tools });
+          const saved = await updateConnection(env, row.id, { tools: discovered.tools });
+          if (!saved.ok) {
+            return Response.json({ ok: false, error: `Discovery OK, tapi gagal simpan: ${saved.text}` }, { status: 502 });
+          }
           return Response.json({ ok: true, kind: "mcp", tools: discovered.tools });
         }
 
-        // kind=http: cek reachability
+        // kind=http: cek reachability (redirect-safe)
         try {
-          const { assertPublicConnectorUrl } = await import("@/lib/agent-connectors.ts");
-          const url = assertPublicConnectorUrl(row.base_url);
-          const res = await fetch(url, {
-            method: "HEAD",
-            headers: { "User-Agent": "lumens-connector/1.0" },
-            signal: AbortSignal.timeout(15_000),
-          });
+          const res = await fetchPublicUrl(
+            row.base_url,
+            {
+              method: "HEAD",
+              headers: { "User-Agent": "lumens-connector/1.0" },
+              signal: AbortSignal.timeout(15_000),
+            },
+          );
           return Response.json({ ok: true, kind: "http", status: res.status });
         } catch (error) {
           return Response.json(

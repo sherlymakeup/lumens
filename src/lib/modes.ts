@@ -1,114 +1,115 @@
 import type { ExtraField, ModeId } from "./types";
+import type { StringKey } from "./i18n";
 
 export type StudioMode = {
   id: ModeId;
-  label: string;
-  hint: string;
-  description: string;
-  placeholder: string;
+  label: StringKey;
+  hint: StringKey;
+  description: StringKey;
+  placeholder: StringKey;
   system: string;
-  starters: string[];
+  starters: StringKey[];
   extras: ExtraField[];
 };
 
 const TONE: ExtraField = {
   key: "tone",
-  label: "Tone",
+  label: "extra.tone.label",
   defaultValue: "neutral",
   options: [
-    { value: "neutral", label: "Neutral" },
-    { value: "formal", label: "Formal" },
-    { value: "casual", label: "Casual" },
-    { value: "persuasive", label: "Persuasive" },
-    { value: "warm", label: "Warm" },
-    { value: "direct", label: "Direct" },
+    { value: "neutral", label: "extra.tone.opt.neutral" },
+    { value: "formal", label: "extra.tone.opt.formal" },
+    { value: "casual", label: "extra.tone.opt.casual" },
+    { value: "persuasive", label: "extra.tone.opt.persuasive" },
+    { value: "warm", label: "extra.tone.opt.warm" },
+    { value: "direct", label: "extra.tone.opt.direct" },
   ],
 };
 
 const LENGTH: ExtraField = {
   key: "length",
-  label: "Length",
+  label: "extra.length.label",
   defaultValue: "standard",
   options: [
-    { value: "brief", label: "Brief" },
-    { value: "standard", label: "Standard" },
-    { value: "long", label: "Long" },
+    { value: "brief", label: "extra.length.opt.brief" },
+    { value: "standard", label: "extra.length.opt.standard" },
+    { value: "long", label: "extra.length.opt.long" },
   ],
 };
 
 const LANGUAGE: ExtraField = {
   key: "language",
-  label: "Language",
+  label: "extra.language.label",
   defaultValue: "english",
   options: [
-    { value: "english", label: "English" },
-    { value: "indonesian", label: "Bahasa Indonesia" },
-    { value: "japanese", label: "Japanese" },
-    { value: "spanish", label: "Spanish" },
-    { value: "french", label: "French" },
-    { value: "german", label: "German" },
-    { value: "mandarin", label: "Mandarin" },
-    { value: "korean", label: "Korean" },
-    { value: "arabic", label: "Arabic" },
-    { value: "portuguese", label: "Portuguese" },
+    { value: "english", label: "extra.language.opt.english" },
+    { value: "indonesian", label: "extra.language.opt.indonesian" },
+    { value: "japanese", label: "extra.language.opt.japanese" },
+    { value: "spanish", label: "extra.language.opt.spanish" },
+    { value: "french", label: "extra.language.opt.french" },
+    { value: "german", label: "extra.language.opt.german" },
+    { value: "mandarin", label: "extra.language.opt.mandarin" },
+    { value: "korean", label: "extra.language.opt.korean" },
+    { value: "arabic", label: "extra.language.opt.arabic" },
+    { value: "portuguese", label: "extra.language.opt.portuguese" },
   ],
 };
 
 export const MODES: StudioMode[] = [
   {
     id: "chat",
-    label: "Chat",
-    hint: "Think out loud",
-    description: "Open-ended conversation for questions, planning, and back-and-forth.",
-    placeholder: "Ask anything…",
+    label: "mode.chat.label",
+    hint: "mode.chat.hint",
+    description: "mode.chat.desc",
+    placeholder: "mode.chat.placeholder",
     system:
       "You are XDIRGA, a precise, calm assistant. Answer directly. Use markdown when it helps. Do not add filler openings.",
     starters: [
-      "Help me decide between two product directions — I'll paste the brief.",
-      "What are the trade-offs of streaming vs batch APIs for a chat product?",
-      "Interview me about my project until you can write a one-page brief.",
+      "mode.chat.s1",
+      "mode.chat.s2",
+      "mode.chat.s3",
     ],
     extras: [],
   },
   {
     id: "write",
-    label: "Write",
-    hint: "Long-form prose",
-    description: "Draft essays, articles, stories, and structured documents from a brief.",
-    placeholder: "Describe the piece: audience, angle, and any facts to include…",
+    label: "mode.write.label",
+    hint: "mode.write.hint",
+    description: "mode.write.desc",
+    placeholder: "mode.write.placeholder",
     system:
       "You are Lumen Write. Produce complete, well-structured prose in markdown. Lead with the piece itself — no preamble about what you will do. Match the requested tone and length. Prefer concrete language over hype.",
     starters: [
-      "Write a 700-word essay on why constraint makes software feel considered.",
-      "Draft a product narrative for a quiet notes app aimed at writers.",
-      "Write a short story set in a 24-hour library that only exists when it rains.",
+      "mode.write.s1",
+      "mode.write.s2",
+      "mode.write.s3",
     ],
     extras: [TONE, LENGTH],
   },
   {
     id: "rewrite",
-    label: "Rewrite",
-    hint: "Sharpen existing text",
-    description: "Paraphrase, tighten, expand, or shift tone without losing meaning.",
-    placeholder: "Paste the text to rewrite. Add a note about what to change…",
+    label: "mode.rewrite.label",
+    hint: "mode.rewrite.hint",
+    description: "mode.rewrite.desc",
+    placeholder: "mode.rewrite.placeholder",
     system:
       "You are Lumen Rewrite. Return only the rewritten text unless the user asks for a diff. Preserve meaning, names, and facts. Improve rhythm and clarity.",
     starters: [
-      "Tighten this announcement so it sounds confident, not salesy.",
-      "Rewrite this paragraph in plain language a 14-year-old would follow.",
-      "Expand this bullet outline into a polished two-paragraph intro.",
+      "mode.rewrite.s1",
+      "mode.rewrite.s2",
+      "mode.rewrite.s3",
     ],
     extras: [
       {
         key: "action",
-        label: "Action",
+        label: "extra.action.label",
         defaultValue: "improve",
         options: [
-          { value: "improve", label: "Improve" },
-          { value: "shorten", label: "Shorten" },
-          { value: "expand", label: "Expand" },
-          { value: "simplify", label: "Simplify" },
-          { value: "rephrase", label: "Rephrase" },
+          { value: "improve", label: "extra.action.opt.improve" },
+          { value: "shorten", label: "extra.action.opt.shorten" },
+          { value: "expand", label: "extra.action.opt.expand" },
+          { value: "simplify", label: "extra.action.opt.simplify" },
+          { value: "rephrase", label: "extra.action.opt.rephrase" },
         ],
       },
       TONE,
@@ -116,90 +117,90 @@ export const MODES: StudioMode[] = [
   },
   {
     id: "summarize",
-    label: "Summarize",
-    hint: "Compress to signal",
-    description: "Turn long notes, articles, or transcripts into a usable brief.",
-    placeholder: "Paste the source text or notes to summarize…",
+    label: "mode.summarize.label",
+    hint: "mode.summarize.hint",
+    description: "mode.summarize.desc",
+    placeholder: "mode.summarize.placeholder",
     system:
       "You are Lumen Summarize. Extract the load-bearing points. Prefer a short headline, then bullets or a tight paragraph. Do not invent facts that are not in the source.",
     starters: [
-      "Summarize this meeting transcript into decisions, owners, and open questions.",
-      "Give me a one-paragraph abstract plus five bullets of key claims.",
-      "Turn this article into a briefing I can read in 90 seconds.",
+      "mode.summarize.s1",
+      "mode.summarize.s2",
+      "mode.summarize.s3",
     ],
     extras: [LENGTH],
   },
   {
     id: "translate",
-    label: "Translate",
-    hint: "Across languages",
-    description: "Faithful translation that keeps register, idiom, and intent.",
-    placeholder: "Paste text to translate. Mention any terms to keep as-is…",
+    label: "mode.translate.label",
+    hint: "mode.translate.hint",
+    description: "mode.translate.desc",
+    placeholder: "mode.translate.placeholder",
     system:
       "You are Lumen Translate. Produce a natural translation in the target language. Preserve tone and proper nouns. If a phrase is idiomatic, translate the meaning, not the words. Return the translation first.",
     starters: [
-      "Translate this product tagline into Bahasa Indonesia, keeping it short.",
-      "Translate this support email into Japanese, polite but not stiff.",
-      "Translate this paragraph into Spanish for a professional newsletter.",
+      "mode.translate.s1",
+      "mode.translate.s2",
+      "mode.translate.s3",
     ],
     extras: [
-      { ...LANGUAGE, key: "target", label: "Target", defaultValue: "indonesian" },
+      { ...LANGUAGE, key: "target", label: "extra.target.label", defaultValue: "indonesian" },
     ],
   },
   {
     id: "code",
-    label: "Code",
-    hint: "Read, write, explain",
-    description: "Generate, review, and explain code with working examples.",
-    placeholder: "Describe the function, paste a snippet, or ask for a review…",
+    label: "mode.code.label",
+    hint: "mode.code.hint",
+    description: "mode.code.desc",
+    placeholder: "mode.code.placeholder",
     system:
       "You are Lumen Code. Write correct, minimal code. Explain only what is necessary. Use fenced blocks with a language tag. Call out edge cases and failure modes.",
     starters: [
-      "Write a TypeScript function that parses OpenAI-style SSE chat streams.",
-      "Review this React component for accessibility and suggest a patch.",
-      "Explain this regex and replace it with a readable parser.",
+      "mode.code.s1",
+      "mode.code.s2",
+      "mode.code.s3",
     ],
     extras: [
       {
         key: "language",
-        label: "Stack",
+        label: "extra.stack.label",
         defaultValue: "typescript",
         options: [
-          { value: "typescript", label: "TypeScript" },
-          { value: "python", label: "Python" },
-          { value: "go", label: "Go" },
-          { value: "rust", label: "Rust" },
-          { value: "sql", label: "SQL" },
-          { value: "bash", label: "Bash" },
+          { value: "typescript", label: "extra.stack.opt.typescript" },
+          { value: "python", label: "extra.stack.opt.python" },
+          { value: "go", label: "extra.stack.opt.go" },
+          { value: "rust", label: "extra.stack.opt.rust" },
+          { value: "sql", label: "extra.stack.opt.sql" },
+          { value: "bash", label: "extra.stack.opt.bash" },
         ],
       },
     ],
   },
   {
     id: "email",
-    label: "Email",
-    hint: "Correspondence",
-    description: "Draft clear emails for outreach, follow-ups, requests, and updates.",
-    placeholder: "Who is this to, what do you need, and any context they have…",
+    label: "mode.email.label",
+    hint: "mode.email.hint",
+    description: "mode.email.desc",
+    placeholder: "mode.email.placeholder",
     system:
       "You are Lumen Email. Write a ready-to-send email with a subject line. Keep it human and specific. No padded greetings, no 'I hope this finds you well' unless the user asks for a warm register.",
     starters: [
-      "Ask a designer for one more revision without sounding frustrated.",
-      "Follow up on a proposal sent last Tuesday. Keep it short.",
-      "Decline a meeting and offer two written alternatives.",
+      "mode.email.s1",
+      "mode.email.s2",
+      "mode.email.s3",
     ],
     extras: [
       {
         key: "kind",
-        label: "Kind",
+        label: "extra.kind.label",
         defaultValue: "request",
         options: [
-          { value: "request", label: "Request" },
-          { value: "followup", label: "Follow-up" },
-          { value: "update", label: "Update" },
-          { value: "intro", label: "Intro" },
-          { value: "apology", label: "Apology" },
-          { value: "decline", label: "Decline" },
+          { value: "request", label: "extra.kind.opt.request" },
+          { value: "followup", label: "extra.kind.opt.followup" },
+          { value: "update", label: "extra.kind.opt.update" },
+          { value: "intro", label: "extra.kind.opt.intro" },
+          { value: "apology", label: "extra.kind.opt.apology" },
+          { value: "decline", label: "extra.kind.opt.decline" },
         ],
       },
       TONE,
@@ -207,27 +208,27 @@ export const MODES: StudioMode[] = [
   },
   {
     id: "social",
-    label: "Social",
-    hint: "Short public copy",
-    description: "Captions, posts, and threads that sound like a person, not a brand bot.",
-    placeholder: "What should the post say, and who is it for…",
+    label: "mode.social.label",
+    hint: "mode.social.hint",
+    description: "mode.social.desc",
+    placeholder: "mode.social.placeholder",
     system:
       "You are Lumen Social. Write copy that can be posted as-is. Avoid hashtag spam, emoji stuffing, and engagement bait. Match the platform's length and rhythm. Offer one primary draft, then two lighter variations if useful.",
     starters: [
-      "Write an X post announcing a writing studio with streaming AI drafts.",
-      "LinkedIn post about shipping a small tool instead of a platform.",
-      "Instagram caption for a photo of a desk at dusk — quiet, not cute.",
+      "mode.social.s1",
+      "mode.social.s2",
+      "mode.social.s3",
     ],
     extras: [
       {
         key: "platform",
-        label: "Platform",
+        label: "extra.platform.label",
         defaultValue: "x",
         options: [
-          { value: "x", label: "X" },
-          { value: "linkedin", label: "LinkedIn" },
-          { value: "instagram", label: "Instagram" },
-          { value: "thread", label: "Thread" },
+          { value: "x", label: "extra.platform.opt.x" },
+          { value: "linkedin", label: "extra.platform.opt.linkedin" },
+          { value: "instagram", label: "extra.platform.opt.instagram" },
+          { value: "thread", label: "extra.platform.opt.thread" },
         ],
       },
       TONE,
@@ -235,53 +236,53 @@ export const MODES: StudioMode[] = [
   },
   {
     id: "ideas",
-    label: "Ideas",
-    hint: "Diverge, then pick",
-    description: "Brainstorm names, outlines, angles, and options with a clear structure.",
-    placeholder: "What are you exploring? Constraints help…",
+    label: "mode.ideas.label",
+    hint: "mode.ideas.hint",
+    description: "mode.ideas.desc",
+    placeholder: "mode.ideas.placeholder",
     system:
       "You are Lumen Ideas. Generate distinct options, not near-duplicates. Group them. Mark 1–2 you would actually ship and say why. Be opinionated.",
     starters: [
-      "Give me 12 names for a calm AI writing studio. No invented Latin.",
-      "Outline three structures for a 1,200-word essay on attention.",
-      "Brainstorm launch angles for a local-first markdown app.",
+      "mode.ideas.s1",
+      "mode.ideas.s2",
+      "mode.ideas.s3",
     ],
     extras: [
       {
         key: "count",
-        label: "Volume",
+        label: "extra.count.label",
         defaultValue: "ten",
         options: [
-          { value: "five", label: "5" },
-          { value: "ten", label: "10" },
-          { value: "twenty", label: "20" },
+          { value: "five", label: "extra.count.opt.five" },
+          { value: "ten", label: "extra.count.opt.ten" },
+          { value: "twenty", label: "extra.count.opt.twenty" },
         ],
       },
     ],
   },
   {
     id: "explain",
-    label: "Explain",
-    hint: "Make it click",
-    description: "Teach a concept at the right altitude, with examples.",
-    placeholder: "What should be explained, and to whom…",
+    label: "mode.explain.label",
+    hint: "mode.explain.hint",
+    description: "mode.explain.desc",
+    placeholder: "mode.explain.placeholder",
     system:
       "You are Lumen Explain. Teach clearly. Start with the one-sentence version, then the mechanism, then a concrete example. Avoid jargon unless you define it. No quiz-show energy.",
     starters: [
-      "Explain SSE streaming as if I have shipped REST but never used it.",
-      "What actually happens when you press Send in a chat app?",
-      "Explain temperature, top-p, and max tokens with one cooking metaphor each — then drop the metaphor.",
+      "mode.explain.s1",
+      "mode.explain.s2",
+      "mode.explain.s3",
     ],
     extras: [
       {
         key: "level",
-        label: "Level",
+        label: "extra.level.label",
         defaultValue: "practitioner",
         options: [
-          { value: "eli5", label: "ELI5" },
-          { value: "student", label: "Student" },
-          { value: "practitioner", label: "Practitioner" },
-          { value: "expert", label: "Expert" },
+          { value: "eli5", label: "extra.level.opt.eli5" },
+          { value: "student", label: "extra.level.opt.student" },
+          { value: "practitioner", label: "extra.level.opt.practitioner" },
+          { value: "expert", label: "extra.level.opt.expert" },
         ],
       },
     ],
@@ -300,13 +301,18 @@ export function defaultExtras(modeId: ModeId): Record<string, string> {
   return extras;
 }
 
-export function extrasInstruction(modeId: ModeId, extras: Record<string, string>) {
+export function extrasInstruction(
+  modeId: ModeId,
+  extras: Record<string, string>,
+  t: Record<StringKey, string>,
+) {
   const mode = MODE_BY_ID[modeId];
   if (mode.extras.length === 0) return "";
   const lines = mode.extras.map((field) => {
     const value = extras[field.key] ?? field.defaultValue;
-    const label = field.options.find((option) => option.value === value)?.label ?? value;
-    return `${field.label}: ${label}`;
+    const opt = field.options.find((option) => option.value === value);
+    const label = opt ? t[opt.label] : value;
+    return `${t[field.label]}: ${label}`;
   });
   return `Constraints:\n${lines.join("\n")}`;
 }

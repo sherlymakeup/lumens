@@ -111,6 +111,7 @@ export function Projects() {
                     type="button"
                     aria-label={`${t["proj.delete"]}: ${project.name}`}
                     onClick={() => {
+                      if (!window.confirm(`Hapus proyek "${project.name}"?`)) return;
                       deleteProject(project.id);
                       if (openId === project.id) setOpenId(null);
                       toast.success(t["proj.deleted"]);

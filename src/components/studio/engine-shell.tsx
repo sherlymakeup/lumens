@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useStudio } from "@/lib/store";
 import { PageBar } from "./header";
 import { Sidebar } from "./sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 
 export function EngineShell({
   kicker,
@@ -22,11 +22,7 @@ export function EngineShell({
       <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
         <Sidebar />
       </aside>
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" title="Menus" className="p-0 max-w-72">
-          <Sidebar />
-        </SheetContent>
-      </Sheet>
+      <MobileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <PageBar title={title} />
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">

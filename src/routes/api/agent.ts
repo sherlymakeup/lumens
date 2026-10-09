@@ -488,7 +488,7 @@ export const Route = createFileRoute("/api/agent")({
                   const tools = (r.tools ?? []).map((t) => t.name).join(", ") || "—";
                   return `- ${r.name} (${r.kind}): ${tools}`;
                 });
-                systemPrompt += `\n\nKonektor aktif (panggil via tool konektor_<nama>__<tool>):
+                systemPrompt += `\n\nKonektor aktif (panggil via tool konektor_<slug-nama>__<slug-tool>, huruf kecil tanpa spasi):
 ${lines.join("\n")}
 Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan pernah meminta atau menampilkan secret/API key — autentikasi sudah ditangani server.`;
               }

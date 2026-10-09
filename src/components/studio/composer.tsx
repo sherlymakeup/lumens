@@ -85,42 +85,47 @@ export function Composer({
     if (!list || list.length === 0 || uploading || disabled) return;
     const files = [...list].slice(0, 5 - attachments.length);
     if (files.length === 0) {
-      toast.error("Maksimal 5 lampiran per pesan.");
+      toast.error(t["cmp.maxAttachments"]);
       return;
     }
     setUploading(true);
     try {
       const next = [...attachments];
       for (const file of files) {
-        if (file.size > MAX_CLIENT_BYTES) {
-          toast.error(`"${file.name}" terlalu besar (maks 10 MB).`);
-          continue;
+        // Per-file try/catch: satu file gagal tidak membuang file lain yang sukses
+        try {
+          if (file.size > MAX_CLIENT_BYTES) {
+            toast.error(`"${file.name}" ${t["cmp.fileTooBig"]}`);
+            continue;
+          }
+          const base64 = await readAsBase64(file);
+          const res = await fetch("/api/agent/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sandboxId,
+              name: file.name,
+              mime: file.type || "application/octet-stream",
+              base64,
+            }),
+          });
+          const body = (await res.json().catch(() => null)) as {
+            ok?: boolean;
+            sandboxId?: string;
+            attachment?: ChatAttachment;
+            error?: string;
+          } | null;
+          if (!res.ok || !body?.ok || !body.attachment) {
+            toast.error(body?.error ?? `Gagal upload "${file.name}".`);
+            continue;
+          }
+          next.push(body.attachment);
+          // Upload bisa membuat sandbox baru — propagasi ID-nya agar request
+          // agent nanti memakai sandbox yang sama (file tidak "hilang").
+          if (body.sandboxId) onUploadSandboxId?.(body.sandboxId);
+        } catch {
+          toast.error(`${t["cmp.uploadFailed"]} "${file.name}".`);
         }
-        const base64 = await readAsBase64(file);
-        const res = await fetch("/api/agent/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sandboxId,
-            name: file.name,
-            mime: file.type || "application/octet-stream",
-            base64,
-          }),
-        });
-        const body = (await res.json().catch(() => null)) as {
-          ok?: boolean;
-          sandboxId?: string;
-          attachment?: ChatAttachment;
-          error?: string;
-        } | null;
-        if (!res.ok || !body?.ok || !body.attachment) {
-          toast.error(body?.error ?? `Gagal upload "${file.name}".`);
-          continue;
-        }
-        next.push(body.attachment);
-        // Upload bisa membuat sandbox baru — propagasi ID-nya agar request
-        // agent nanti memakai sandbox yang sama (file tidak "hilang").
-        if (body.sandboxId) onUploadSandboxId?.(body.sandboxId);
       }
       onAttachments(next);
     } finally {
@@ -163,7 +168,7 @@ export function Composer({
             {mode.extras.map((field) => (
               <label key={field.key} className="flex items-center gap-2">
                 <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {field.label}
+                  {t[field.label]}
                 </span>
                 <Select
                   value={extras[field.key] ?? field.defaultValue}
@@ -175,7 +180,7 @@ export function Composer({
                   <SelectContent>
                     {field.options.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {t[option.label]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -214,7 +219,7 @@ export function Composer({
           onKeyDown={onKeyDown}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
-          placeholder={mode.placeholder}
+          placeholder={t[mode.placeholder]}
           disabled={disabled}
           rows={1}
           className="max-h-55 w-full resize-none overflow-y-auto bg-transparent px-4 py-2 text-[15px] leading-relaxed text-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground disabled:opacity-50"
@@ -231,8 +236,8 @@ export function Composer({
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={disabled || uploading || streaming || attachments.length >= 5}
-            title="Lampirkan file"
+            disabled={disabled || uploading || streaming || attachments.length >= 5 || !agentMode}
+            title={agentMode ? t["cmp.attachFile"] : t["cmp.attachAgentOnly"]}
             className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
           >
             {uploading ? (

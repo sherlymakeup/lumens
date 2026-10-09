@@ -82,7 +82,8 @@ export const Route = createFileRoute("/api/generate")({
               "User-Agent": "lumens-proxy/1.0",
             },
             body: JSON.stringify(payload),
-            signal: request.signal,
+            // Timeout 60 dtk + tetap batal saat client disconnect
+            signal: AbortSignal.any([request.signal, AbortSignal.timeout(60_000)]),
           });
         } catch (error) {
           if (request.signal.aborted) {
@@ -110,10 +111,10 @@ export const Route = createFileRoute("/api/generate")({
         }
 
         if (!stream) {
-          const body = (await upstream.json()) as {
+          const body = (await upstream.json().catch(() => null)) as {
             choices?: { message?: { content?: string } }[];
-          };
-          const text = body.choices?.[0]?.message?.content ?? "";
+          } | null;
+          const text = body?.choices?.[0]?.message?.content ?? "";
           if (!text) {
             return Response.json(
               { error: "Gateway returned an empty response." },

@@ -1,6 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { imagesGenerationsUrl } from "@/lib/safe-url";
+import { imagesGenerationsUrl, normalizeBaseUrl } from "@/lib/safe-url";
+
+// Batas ukuran gambar provider (defense-in-depth, anti memory bloat)
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+
+/** URL gambar provider wajib https publik (blokir localhost/IP privat). */
+function assertPublicImageUrl(raw: string): string {
+  const normalized = normalizeBaseUrl(raw);
+  const parsed = new URL(normalized);
+  if (parsed.protocol !== "https:") {
+    throw new Error("URL gambar harus memakai https.");
+  }
+  return normalized;
+}
 
 const Body = z.object({
   model: z.string().min(1).max(120),
@@ -32,12 +45,20 @@ async function toGeneratedImage(item: {
   }
   if (item.url) {
     // Upstream URLs can expire or be unreachable from the browser,
-    // so fetch server-side and embed as base64.
-    const res = await fetch(item.url, { signal: AbortSignal.timeout(30_000) });
+    // so fetch server-side and embed as base64. Validasi URL publik
+    // (defense-in-depth: URL datang dari response provider).
+    let safeUrl: string;
+    try {
+      safeUrl = assertPublicImageUrl(item.url);
+    } catch {
+      return null;
+    }
+    const res = await fetch(safeUrl, { signal: AbortSignal.timeout(30_000) });
     if (!res.ok) return null;
-    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/png";
+    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "";
+    if (!mime.startsWith("image/")) return null;
     const buf = Buffer.from(await res.arrayBuffer());
-    if (!buf.length) return null;
+    if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
     return { dataUrl: `data:${mime};base64,${buf.toString("base64")}`, mime };
   }
   return null;

@@ -236,3 +236,82 @@ test("discoverMcpTools: URL privat ditolak", async () => {
   const r = await conn.discoverMcpTools("https://127.0.0.1/rpc", null, "none", null, async () => ({}));
   assert.equal(r.ok, false);
 });
+
+// ---------- connection-validation ----------
+test("validateConnectionPayload: slug bentrok antar koneksi", async () => {
+  const { validateConnectionPayload } = await import("../src/lib/connection-validation.ts");
+  const existing = [{ id: "a", name: "API Cuaca" }];
+  const r = validateConnectionPayload({ name: "API-Cuaca!" }, existing, undefined);
+  assert.equal(r.ok, false);
+  assert.ok(r.error.includes("API Cuaca"));
+  // excludeId membolehkan nama sendiri (PATCH tanpa ganti nama)
+  const r2 = validateConnectionPayload({ name: "API Cuaca" }, existing, "a");
+  assert.equal(r2.ok, true);
+});
+
+test("validateConnectionPayload: auth_name & tool duplikat", async () => {
+  const { validateConnectionPayload } = await import("../src/lib/connection-validation.ts");
+  const r1 = validateConnectionPayload({ auth_type: "header", auth_name: " " }, [], undefined);
+  assert.equal(r1.ok, false);
+  const r2 = validateConnectionPayload(
+    { tools: [{ name: "Ambil" }, { name: "ambil!" }] },
+    [],
+    undefined,
+  );
+  assert.equal(r2.ok, false);
+  const r3 = validateConnectionPayload(
+    { name: "Baru", base_url: "https://api.test", tools: [{ name: "ambil" }] },
+    [],
+    undefined,
+  );
+  assert.equal(r3.ok, true);
+});
+
+// ---------- fetchPublicUrl (anti redirect-SSRF) ----------
+const resp = (status, url, location) => ({
+  status,
+  url,
+  headers: { get: (k) => (k.toLowerCase() === "location" ? location ?? null : null) },
+  arrayBuffer: async () => new ArrayBuffer(0),
+});
+
+test("fetchPublicUrl: tanpa redirect langsung return", async () => {
+  const r = await conn.fetchPublicUrl(
+    "https://api.test/x",
+    {},
+    async (url, init) => {
+      assert.equal(init.redirect, "manual");
+      return resp(200, url, null);
+    },
+  );
+  assert.equal(r.status, 200);
+});
+
+test("fetchPublicUrl: ikuti redirect publik, tolak redirect ke IP privat", async () => {
+  let calls = 0;
+  const fetchFn = async (url) => {
+    calls++;
+    if (calls === 1) return resp(302, url, "https://cdn.test/y");
+    if (calls === 2) return resp(302, url, "http://169.254.169.254/z");
+    return resp(200, url, null);
+  };
+  await assert.rejects(() => conn.fetchPublicUrl("https://api.test/x", {}, fetchFn), /not allowed|privat|https/);
+  assert.equal(calls, 2);
+});
+
+test("fetchPublicUrl: location relatif di-resolve", async () => {
+  const seen = [];
+  const fetchFn = async (url) => {
+    seen.push(url);
+    if (seen.length === 1) return resp(301, url, "/v2/data");
+    return resp(200, url, null);
+  };
+  const r = await conn.fetchPublicUrl("https://api.test/v1/data", {}, fetchFn);
+  assert.equal(r.status, 200);
+  assert.deepEqual(seen, ["https://api.test/v1/data", "https://api.test/v2/data"]);
+});
+
+test("fetchPublicUrl: redirect loop dibatasi", async () => {
+  const fetchFn = async (url) => resp(302, url, "https://api.test/loop");
+  await assert.rejects(() => conn.fetchPublicUrl("https://api.test/loop", {}, fetchFn), /redirect/i);
+});
