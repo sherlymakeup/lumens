@@ -2,7 +2,9 @@ import { useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
 
-/** Proteksi route: redirect ke /login jika belum auth (kecuali auth belum dikonfigurasi). */
+/** Proteksi route: redirect ke /login jika belum auth.
+ *  TIDAK memblokir render dengan spinner — app langsung tampil,
+ *  redirect jalan di background setelah auth state jelas. */
 export function AuthGate({ children }: { children: ReactNode }) {
   const { user, loading, configured } = useAuth();
   const navigate = useNavigate();
@@ -10,24 +12,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    if (!configured) return; // fallback: mode tanpa auth (localStorage)
+    if (!configured) return; // fallback: mode tanpa auth
     if (!user && location.pathname !== "/login") {
       navigate({ to: "/login", replace: true });
     }
+    if (user && location.pathname === "/login") {
+      navigate({ to: "/", replace: true });
+    }
   }, [user, loading, configured, location.pathname, navigate]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
-        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  // Jika auth dikonfigurasi tapi belum login dan bukan di /login, jangan render.
-  if (configured && !user && location.pathname !== "/login") {
-    return null;
-  }
-
+  // Render langsung — jangan tunggu auth. Server-side pun langsung render app.
   return <>{children}</>;
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useStrings } from "@/lib/i18n";
 
@@ -15,10 +15,11 @@ function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!loading && user) {
-    navigate({ to: "/", replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && user) {
+      navigate({ to: "/", replace: true });
+    }
+  }, [user, loading, navigate]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
