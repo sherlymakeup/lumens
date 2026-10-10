@@ -1,1 +1,1 @@
-{"crons":[{"path":"/api/cron","schedule":"* * * * *"}],"installCommand":"npm install --omit=dev --no-audit --no-fund"}
+{"crons":[{"path":"/api/cron","schedule":"0 0 * * *"}],"installCommand":"npm install --omit=dev --no-audit --no-fund"}
