@@ -26,6 +26,7 @@ import { Route as ApiImagesRouteImport } from './routes/api/images'
 import { Route as ApiModelsRouteImport } from './routes/api/models'
 import { Route as ApiModelsTestRouteImport } from './routes/api/models-test'
 import { Route as ApiTriggersRouteImport } from './routes/api/triggers'
+import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as EnginesCodeRouteImport } from './routes/engines/code'
 import { Route as EnginesContentRouteImport } from './routes/engines/content'
 import { Route as EnginesDesignRouteImport } from './routes/engines/design'
@@ -122,6 +123,11 @@ const ApiTriggersRoute = ApiTriggersRouteImport.update({
   path: '/api/triggers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVersionRoute = ApiVersionRouteImport.update({
+  id: '/api/version',
+  path: '/api/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EnginesCodeRoute = EnginesCodeRouteImport.update({
   id: '/engines/code',
   path: '/engines/code',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/api/models': typeof ApiModelsRoute
   '/api/models-test': typeof ApiModelsTestRoute
   '/api/triggers': typeof ApiTriggersRoute
+  '/api/version': typeof ApiVersionRoute
   '/engines/code': typeof EnginesCodeRoute
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/api/models': typeof ApiModelsRoute
   '/api/models-test': typeof ApiModelsTestRoute
   '/api/triggers': typeof ApiTriggersRoute
+  '/api/version': typeof ApiVersionRoute
   '/engines/code': typeof EnginesCodeRoute
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
@@ -250,6 +258,7 @@ export interface FileRoutesById {
   '/api/models': typeof ApiModelsRoute
   '/api/models-test': typeof ApiModelsTestRoute
   '/api/triggers': typeof ApiTriggersRoute
+  '/api/version': typeof ApiVersionRoute
   '/engines/code': typeof EnginesCodeRoute
   '/engines/content': typeof EnginesContentRoute
   '/engines/design': typeof EnginesDesignRoute
@@ -281,6 +290,7 @@ export interface FileRouteTypes {
     | '/api/models'
     | '/api/models-test'
     | '/api/triggers'
+    | '/api/version'
     | '/engines/code'
     | '/engines/content'
     | '/engines/design'
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/api/models'
     | '/api/models-test'
     | '/api/triggers'
+    | '/api/version'
     | '/engines/code'
     | '/engines/content'
     | '/engines/design'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/api/models'
     | '/api/models-test'
     | '/api/triggers'
+    | '/api/version'
     | '/engines/code'
     | '/engines/content'
     | '/engines/design'
@@ -369,6 +381,7 @@ export interface RootRouteChildren {
   ApiModelsRoute: typeof ApiModelsRoute
   ApiModelsTestRoute: typeof ApiModelsTestRoute
   ApiTriggersRoute: typeof ApiTriggersRoute
+  ApiVersionRoute: typeof ApiVersionRoute
   EnginesCodeRoute: typeof EnginesCodeRoute
   EnginesContentRoute: typeof EnginesContentRoute
   EnginesDesignRoute: typeof EnginesDesignRoute
@@ -499,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTriggersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/version': {
+      id: '/api/version'
+      path: '/api/version'
+      fullPath: '/api/version'
+      preLoaderRoute: typeof ApiVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/engines/code': {
       id: '/engines/code'
       path: '/engines/code'
@@ -625,6 +645,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiModelsRoute: ApiModelsRoute,
   ApiModelsTestRoute: ApiModelsTestRoute,
   ApiTriggersRoute: ApiTriggersRoute,
+  ApiVersionRoute: ApiVersionRoute,
   EnginesCodeRoute: EnginesCodeRoute,
   EnginesContentRoute: EnginesContentRoute,
   EnginesDesignRoute: EnginesDesignRoute,

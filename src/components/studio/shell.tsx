@@ -7,6 +7,7 @@ import { resolveAgentSandboxId } from "@/lib/agent-upload";
 import { styleInstruction } from "@/lib/style";
 import { useStudio } from "@/lib/store";
 import { useStrings, type StringKey } from "@/lib/i18n";
+import { useVersionCheck } from "@/lib/use-version-check";
 import { applyDensity, applyFontSize, applyTheme } from "@/lib/theme";
 import type { ChatAttachment, ChatMessage } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -47,6 +48,7 @@ export function Studio() {
   const t = useStrings();
   const stringsRef = useRef(t);
   stringsRef.current = t;
+  const updateAvailable = useVersionCheck();
   const navigate = useNavigate();
   const setHydrated = useStudio((s) => s.setHydrated);
   const settings = useStudio((s) => s.settings);
@@ -481,6 +483,15 @@ export function Studio() {
       className="flex h-dvh overflow-hidden bg-background text-foreground"
       data-density={settings.density}
     >
+      {updateAvailable ? (
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="fixed top-2 left-1/2 z-50 -translate-x-1/2 rounded-full border border-primary/40 bg-card/95 px-4 py-2 text-sm font-medium shadow-lg backdrop-blur transition-colors hover:border-primary"
+        >
+          {t["app.updateAvailable"]} {t["app.refreshNow"]} →
+        </button>
+      ) : null}
       {sidebarCollapsed ? null : (
         <aside className="hidden h-dvh w-64 shrink-0 border-r border-sidebar-border md:block">
           <Sidebar />

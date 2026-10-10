@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { AuthProvider as SupabaseAuthProvider } from "@/lib/auth-context";
 import { AuthGate } from "@/components/auth-gate";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { useConversationsSync } from "@/lib/conversations-sync";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -52,7 +53,9 @@ export const Route = createRootRoute({
         <AuthProvider>
           <SupabaseAuthProvider>
             <AuthGate>
-              <AppShell />
+              <ErrorBoundary>
+                <AppShell />
+              </ErrorBoundary>
             </AuthGate>
           </SupabaseAuthProvider>
         </AuthProvider>
