@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useStrings } from "@/lib/i18n";
@@ -8,11 +8,15 @@ export const Route = createFileRoute("/login")({ component: Login });
 function Login() {
   const t = useStrings();
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { verified?: string };
   const { signIn, signUp, configured, user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"in" | "up">("in");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(
+    search.verified ? t["auth.verified"] : null,
+  );
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -24,14 +28,28 @@ function Login() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setBusy(true);
-    const fn = mode === "in" ? signIn : signUp;
-    const { error: err } = await fn(email.trim(), password);
-    setBusy(false);
-    if (err) {
-      setError(err);
+    if (mode === "in") {
+      const { error: err } = await signIn(email.trim(), password);
+      setBusy(false);
+      if (err) {
+        setError(err);
+      } else {
+        navigate({ to: "/", replace: true });
+      }
     } else {
-      navigate({ to: "/", replace: true });
+      const { error: err, needsConfirmation } = await signUp(email.trim(), password);
+      setBusy(false);
+      if (err) {
+        setError(err);
+      } else if (needsConfirmation) {
+        // Jangan redirect — kasih tau user untuk cek email.
+        setInfo(t["auth.checkEmail"]);
+        setMode("in");
+      } else {
+        navigate({ to: "/", replace: true });
+      }
     }
   }
 
@@ -86,6 +104,11 @@ function Login() {
                 {error}
               </p>
             ) : null}
+            {info ? (
+              <p className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-400">
+                {info}
+              </p>
+            ) : null}
             <button
               type="submit"
               disabled={busy}
@@ -98,6 +121,7 @@ function Login() {
               onClick={() => {
                 setMode(mode === "in" ? "up" : "in");
                 setError(null);
+                setInfo(null);
               }}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
             >

@@ -8,7 +8,10 @@ type AuthState = {
   loading: boolean;
   configured: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
   getToken: () => Promise<string | null>;
 };
@@ -69,9 +72,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUp(email: string, password: string) {
     const sb = getSupabase();
-    if (!sb) return { error: "Auth belum dikonfigurasi." };
-    const { error } = await sb.auth.signUp({ email, password });
-    return { error: error?.message ?? null };
+    if (!sb) return { error: "Auth belum dikonfigurasi.", needsConfirmation: false };
+    // emailRedirectTo: override Site URL Supabase agar konfirmasi balik ke production, bukan localhost.
+    const redirectTo =
+      typeof window !== "undefined" ? `${window.location.origin}/login?verified=1` : undefined;
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+    });
+    // needsConfirmation: true jika user dibuat tapi belum ada session (perlu klik link email).
+    const needsConfirmation = !error && !data.session;
+    return { error: error?.message ?? null, needsConfirmation };
   }
 
   async function signOut() {
