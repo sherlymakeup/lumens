@@ -26,11 +26,13 @@ function inlineToHtml(text: string) {
   );
   // Fallback: sandbox:// links ditulis agent sebagai markdown — render sebagai
   // kartu file visual (bukan link rusak). Agent seharusnya pakai read_file tool.
+  // NOTE: html sudah di-escape di atas, jadi JANGAN panggil escapeHtml lagi di sini
+  // (double-escape: & → &amp;amp;).
   html = html.replace(
     /\[([^\]]+)\]\(sandbox:\/\/([^\s)]+)\)/g,
     (_m, label: string, path: string) => {
       const filename = path.split("/").pop() ?? path;
-      return `<span class="md-sandbox-file" data-path="${escapeHtml(path)}"><span class="md-sandbox-file-icon">📄</span><span class="md-sandbox-file-name">${escapeHtml(filename)}</span><span class="md-sandbox-file-hint">${escapeHtml(label)}</span></span>`;
+      return `<span class="md-sandbox-file" data-path="${path}"><span class="md-sandbox-file-icon">📄</span><span class="md-sandbox-file-name">${filename}</span><span class="md-sandbox-file-hint">${label}</span></span>`;
     },
   );
   return html;

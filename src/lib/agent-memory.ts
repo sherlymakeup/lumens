@@ -27,6 +27,7 @@ export async function searchMemories(
   query: string,
   env: MemoryEnv,
   limit = 5,
+  userId?: string,
 ): Promise<MemorySearchOutcome> {
   const q = query.trim().slice(0, 300);
   if (!q) return { ok: false, text: "Query pencarian memory kosong.", memories: [] };
@@ -37,6 +38,8 @@ export async function searchMemories(
     order: "updated_at.desc",
     limit: String(Math.min(Math.max(limit, 1), 10)),
   });
+  // H-7: isolasi per-user — jangan bocorkan ingatan user lain.
+  if (userId) params.set("user_id", `eq.${userId}`);
   let res: Response;
   try {
     res = await fetch(`${env.url}/rest/v1/memories?${params}`, {
@@ -62,6 +65,7 @@ export async function searchMemories(
 export async function saveMemory(
   content: string,
   env: MemoryEnv,
+  userId?: string,
 ): Promise<{ ok: boolean; text: string; id?: string }> {
   const c = content.trim().slice(0, 2000);
   if (!c) return { ok: false, text: "Isi ingatan kosong." };
@@ -71,7 +75,8 @@ export async function saveMemory(
     res = await fetch(`${env.url}/rest/v1/memories`, {
       method: "POST",
       headers: { ...headers(env), Prefer: "return=representation" },
-      body: JSON.stringify({ content: c }),
+      // H-7: ingatan terikat ke pemiliknya.
+      body: JSON.stringify(userId ? { content: c, user_id: userId } : { content: c }),
       signal: AbortSignal.timeout(20_000),
     });
   } catch (error) {
@@ -89,11 +94,14 @@ export async function saveMemory(
 export async function deleteMemory(
   id: string,
   env: MemoryEnv,
+  userId?: string,
 ): Promise<{ ok: boolean; text: string }> {
   const cleanId = id.trim().slice(0, 60);
   if (!cleanId) return { ok: false, text: "ID ingatan kosong." };
   if (!env) return { ok: false, text: NOT_CONFIGURED };
   const params = new URLSearchParams({ id: `eq.${cleanId}` });
+  // H-7: hanya boleh hapus ingatan milik sendiri.
+  if (userId) params.set("user_id", `eq.${userId}`);
   let res: Response;
   try {
     res = await fetch(`${env.url}/rest/v1/memories?${params}`, {

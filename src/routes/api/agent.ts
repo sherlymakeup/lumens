@@ -44,7 +44,8 @@ import { verifyAuth, getServiceClient } from "@/lib/auth-server.ts";
 import { runSubagent } from "@/lib/agent-subagent.ts";
 
 const Message = z.object({
-  role: z.enum(["system", "user", "assistant"]),
+  // H-4: client tidak boleh kirim role "system" (injeksi system prompt).
+  role: z.enum(["user", "assistant"]),
   content: z.string().max(12_000),
 });
 
@@ -454,21 +455,15 @@ export const Route = createFileRoute("/api/agent")({
           // Admin otomatis unlimited.
           const isUnlimited =
             profile?.unlimited === true || profile?.role === "admin";
+          // Simpan untuk deduct nanti (setelah env check — M-4).
+          (request as any).__userId = userId;
+          (request as any).__unlimited = isUnlimited;
+          // Cek awal: kredit habis → tolak sebelum kerja.
           if (!isUnlimited && (profile?.credits ?? 0) <= 0) {
             return Response.json(
               { error: "Kredit habis. Hubungi admin untuk top-up." },
               { status: 402 },
             );
-          }
-          // Simpan untuk deduct nanti.
-          (request as any).__userId = userId;
-          (request as any).__unlimited = isUnlimited;
-          // Deduct 1 credit per panggilan (admin unlimited tidak dikurangi).
-          if (!isUnlimited && profile) {
-            await sb
-              .from("profiles")
-              .update({ credits: Math.max(0, (profile.credits ?? 1) - 1) })
-              .eq("id", userId);
           }
         }
 
@@ -478,9 +473,30 @@ export const Route = createFileRoute("/api/agent")({
         const threadId = rawThreadId && isValidThreadRef(rawThreadId) ? rawThreadId : undefined;
         const tEnv = threadEnv();
         if (threadId && tEnv) {
-          const got = await getThread(tEnv, threadId);
-          if (got.ok && got.thread?.sandbox_id) {
-            sandboxId = got.thread.sandbox_id;
+          // H-8: filter user_id — cegah resume sandbox milik user lain.
+          if (userId) {
+            try {
+              const params = new URLSearchParams({
+                id: `eq.${encodeURIComponent(threadId)}`,
+                user_id: `eq.${userId}`,
+                select: "sandbox_id",
+              });
+              const tRes = await fetch(`${tEnv.url}/rest/v1/threads?${params}`, {
+                headers: { apikey: tEnv.key, Authorization: `Bearer ${tEnv.key}` },
+                signal: AbortSignal.timeout(15_000),
+              });
+              if (tRes.ok) {
+                const rows = (await tRes.json().catch(() => [])) as { sandbox_id?: string }[];
+                if (rows[0]?.sandbox_id) sandboxId = rows[0].sandbox_id;
+              }
+            } catch {
+              /* fallback: tanpa sandbox dari registry */
+            }
+          } else {
+            const got = await getThread(tEnv, threadId);
+            if (got.ok && got.thread?.sandbox_id) {
+              sandboxId = got.thread.sandbox_id;
+            }
           }
         }
 
@@ -498,6 +514,20 @@ export const Route = createFileRoute("/api/agent")({
             { error: "Sandbox belum dikonfigurasi: set NOVITA_API_KEY di environment server." },
             { status: 503 },
           );
+        }
+
+        // M-4: deduct SETELAH env check — jangan hanguskan kredit saat server misconfigured.
+        // H-1: atomic via RPC deduct_credit — cegah double-spend saat request paralel.
+        if (userId && sb && !(request as any).__unlimited) {
+          const { data: remaining, error: deductError } = await sb.rpc("deduct_credit", {
+            p_user_id: userId,
+          });
+          if (deductError || remaining === -1) {
+            return Response.json(
+              { error: "Kredit habis. Hubungi admin untuk top-up." },
+              { status: 402 },
+            );
+          }
         }
 
         let url: string;
@@ -540,7 +570,8 @@ export const Route = createFileRoute("/api/agent")({
             let connectorRows: (ConnectorRecord & { secret: string | null })[] = [];
             let connectorTools: ReturnType<typeof buildConnectorFunctionTools> = [];
             try {
-              const loaded = await listEnabledConnectionsFull(connectionEnv());
+              // C2: hanya koneksi milik user yang sedang request.
+              const loaded = await listEnabledConnectionsFull(connectionEnv(), userId ?? "");
               if (loaded.ok) {
                 connectorRows = loaded.rows.map((r) => ({
                   id: r.id,
@@ -852,7 +883,7 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                       ? clamp(Math.round(Number(args.limit)), 1, 10)
                       : 5;
                     send({ type: "tool_call", kind: "memory", command: query });
-                    const outcome = await searchMemories(query, memoryEnv(), limit);
+                    const outcome = await searchMemories(query, memoryEnv(), limit, userId ?? undefined);
                     const output = clip(outcome.text);
                     send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
                     convo.push({ role: "tool", tool_call_id: tc.id, content: output });
@@ -863,14 +894,14 @@ Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan per
                       kind: "memory",
                       command: content.slice(0, 120),
                     });
-                    const outcome = await saveMemory(content, memoryEnv());
+                    const outcome = await saveMemory(content, memoryEnv(), userId ?? undefined);
                     const output = clip(outcome.text);
                     send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
                     convo.push({ role: "tool", tool_call_id: tc.id, content: output });
                   } else if (tc.name === "memory_delete") {
                     const id = String(args.id ?? "").slice(0, 60);
                     send({ type: "tool_call", kind: "memory", command: `hapus ${id}` });
-                    const outcome = await deleteMemory(id, memoryEnv());
+                    const outcome = await deleteMemory(id, memoryEnv(), userId ?? undefined);
                     const output = clip(outcome.text);
                     send({ type: "tool_result", output, exitCode: outcome.ok ? 0 : 1 });
                     convo.push({ role: "tool", tool_call_id: tc.id, content: output });

@@ -8,14 +8,14 @@ export const Route = createFileRoute("/login")({ component: Login });
 function Login() {
   const t = useStrings();
   const navigate = useNavigate();
-  const search = useSearch({ strict: false }) as { verified?: string };
+  const search = useSearch({ strict: false }) as { verified?: string; expired?: string };
   const { signIn, signUp, configured, user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"in" | "up">("in");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(
-    search.verified ? t["auth.verified"] : null,
+    search.verified ? t["auth.verified"] : search.expired ? t["auth.sessionExpired"] : null,
   );
   const [busy, setBusy] = useState(false);
 

@@ -26,7 +26,7 @@ function isPrivateHostname(hostname: string) {
     host.startsWith("fc") ||
     host.startsWith("fd") ||
     host === "::" ||
-    host.startsWith("::ffff:127.")
+    host.startsWith("::ffff:")
   ) {
     return true;
   }

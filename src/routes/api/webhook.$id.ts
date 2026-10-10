@@ -2,6 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getServiceClient } from "@/lib/auth-server.ts";
 import type { Trigger } from "@/lib/agent-triggers.ts";
 
+/** Samarkan webhook secret untuk ditampilkan (M-2: jangan kembalikan mentah). */
+export function maskWebhookSecret(secret: string | null | undefined): string | null {
+  if (!secret || typeof secret !== "string") return null;
+  if (secret.length <= 8) return "••••••••";
+  return `${secret.slice(0, 4)}••••••••${secret.slice(-4)}`;
+}
+
 /** Webhook trigger: POST /api/webhook/$id dengan header x-webhook-secret. */
 export const Route = createFileRoute("/api/webhook/$id")({
   server: {
@@ -57,7 +64,9 @@ export const Route = createFileRoute("/api/webhook/$id")({
         await sb
           .from("triggers")
           .update({ last_run: new Date().toISOString() })
-          .eq("id", t.id);
+          .eq("id", t.id)
+          // M-11: filter user_id juga (defense in depth).
+          .eq("user_id", t.user_id);
 
         return Response.json({ ok: true, conversationId: convId });
       },

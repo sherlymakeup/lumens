@@ -21,11 +21,13 @@ function ActionButton({
   label,
   onClick,
   active,
+  disabled,
   children,
 }: {
   label: string;
   onClick: () => void;
   active?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -34,9 +36,11 @@ function ActionButton({
       title={label}
       aria-label={label}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         "rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
         active && "bg-accent text-foreground",
+        disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
       )}
     >
       {children}
@@ -171,27 +175,42 @@ export function MessageList({
                 Detail prosesnya ada di panel kanan. */}
             {message.toolCalls?.some((tc) => tc.files && tc.files.length > 0) ? (
               <div className="mt-3 space-y-2">
-                {message.toolCalls.flatMap((tc) => tc.files ?? []).map((file, fileIndex) => (
-                  <a
-                    key={fileIndex}
-                    href={`data:${file.mime};base64,${file.base64}`}
-                    download={file.name}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 transition-colors hover:border-primary/50"
-                  >
-                    <FileDown className="size-5 shrink-0 text-primary" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{file.name}</span>
-                      <span className="block font-mono text-[11px] text-muted-foreground">
-                        {file.size >= 1048576
-                          ? `${(file.size / 1048576).toFixed(1)} MB`
-                          : `${(file.size / 1024).toFixed(1)} KB`}
+                {message.toolCalls.flatMap((tc) => tc.files ?? []).map((file, fileIndex) =>
+                  file.size > 15 * 1048576 ? (
+                    <div
+                      key={fileIndex}
+                      className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5"
+                    >
+                      <FileDown className="size-5 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{file.name}</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          {t["msg.fileTooLarge"]}
+                        </span>
                       </span>
-                    </span>
-                    <span className="shrink-0 text-xs font-medium text-primary">
-                      {t["msg.download"] ?? "Unduh"}
-                    </span>
-                  </a>
-                ))}
+                    </div>
+                  ) : (
+                    <a
+                      key={fileIndex}
+                      href={`data:${file.mime};base64,${file.base64}`}
+                      download={file.name}
+                      className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 transition-colors hover:border-primary/50"
+                    >
+                      <FileDown className="size-5 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{file.name}</span>
+                        <span className="block font-mono text-[11px] text-muted-foreground">
+                          {file.size >= 1048576
+                            ? `${(file.size / 1048576).toFixed(1)} MB`
+                            : `${(file.size / 1024).toFixed(1)} KB`}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-xs font-medium text-primary">
+                        {t["msg.download"] ?? "Unduh"}
+                      </span>
+                    </a>
+                  ),
+                )}
               </div>
             ) : null}
             {!streaming && message.content && !message.error ? (
@@ -203,7 +222,11 @@ export function MessageList({
                   <Copy className="size-3.5" />
                 </ActionButton>
                 {lastAssistant?.id === message.id ? (
-                  <ActionButton label={t["msg.regenerate"]} onClick={onRegenerate}>
+                  <ActionButton
+                    label={t["msg.regenerate"]}
+                    onClick={onRegenerate}
+                    disabled={Boolean(streamingId)}
+                  >
                     <RefreshCw className="size-3.5" />
                   </ActionButton>
                 ) : null}

@@ -54,6 +54,7 @@ export type AgentFile = {
 };
 
 export type ToolCall = {
+  id?: string;
   kind?: "sandbox" | "search" | "image" | "memory" | "file";
   command: string;
   output: string;

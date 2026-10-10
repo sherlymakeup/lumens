@@ -262,7 +262,7 @@ function ModelList({
             {custom && (
               <button
                 type="button"
-                aria-label={`Hapus ${model}`}
+                aria-label={t["conn.removeModel"]}
                 onClick={() => onRemove(model)}
                 className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
               >

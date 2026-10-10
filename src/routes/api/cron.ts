@@ -11,16 +11,17 @@ export const Route = createFileRoute("/api/cron")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // Verifikasi: Vercel Cron mengirim header khusus, atau CRON_SECRET cocok.
+        // H-9: fail-closed. CRON_SECRET wajib diset; tanpa itu endpoint
+        // menolak semua request (termasuk dari Vercel Cron).
         const cronSecret = process.env.CRON_SECRET?.trim();
+        if (!cronSecret) {
+          return Response.json(
+            { error: "Cron belum dikonfigurasi: set CRON_SECRET di environment server." },
+            { status: 503 },
+          );
+        }
         const authHeader = request.headers.get("authorization");
-        const vercelCron = request.headers.get("x-vercel-cron");
-        if (cronSecret) {
-          if (authHeader !== `Bearer ${cronSecret}`) {
-            return Response.json({ error: "Unauthorized" }, { status: 401 });
-          }
-        } else if (!vercelCron && process.env.VERCEL === "1") {
-          // Di Vercel tanpa CRON_SECRET, hanya terima dari Vercel Cron.
+        if (authHeader !== `Bearer ${cronSecret}`) {
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
 

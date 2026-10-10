@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { verifyAuth } from "@/lib/auth-server.ts";
 import { Novita, type Sandbox } from "novita-sandbox";
 
 const Body = z.object({
@@ -17,6 +18,10 @@ export const Route = createFileRoute("/api/sandbox/execute")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // H-6: wajib auth — tiap request bikin sandbox baru (billing).
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
         // The Novita key lives on the server (Vercel env) — never in the UI.
         const apiKey = process.env.NOVITA_API_KEY?.trim() ?? "";
         if (!apiKey) {

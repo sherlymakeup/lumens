@@ -281,8 +281,8 @@ export function SettingsPanel({
                   </Field>
                   <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-3">
                     <div>
-                      <div className="text-sm font-medium">Streaming</div>
-                      <div className="text-xs text-muted-foreground">Tokens appear as they generate</div>
+                      <div className="text-sm font-medium">{t["set.streaming"]}</div>
+                      <div className="text-xs text-muted-foreground">{t["set.streamingHint"]}</div>
                     </div>
                     <Switch
                       checked={settings.stream}
@@ -351,8 +351,8 @@ export function SettingsPanel({
                 <>
                   <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-3">
                     <div>
-                      <div className="text-sm font-medium">Enter to send</div>
-                      <div className="text-xs text-muted-foreground">Shift + Enter always inserts a line</div>
+                      <div className="text-sm font-medium">{t["set.enterToSend"]}</div>
+                      <div className="text-xs text-muted-foreground">{t["set.enterToSendHint"]}</div>
                     </div>
                     <Switch
                       checked={settings.sendWithEnter}
@@ -361,8 +361,8 @@ export function SettingsPanel({
                   </div>
                   <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-3">
                     <div>
-                      <div className="text-sm font-medium">Render markdown</div>
-                      <div className="text-xs text-muted-foreground">Format assistant replies</div>
+                      <div className="text-sm font-medium">{t["set.renderMarkdown"]}</div>
+                      <div className="text-xs text-muted-foreground">{t["set.renderMarkdownHint"]}</div>
                     </div>
                     <Switch
                       checked={settings.showMarkdown}

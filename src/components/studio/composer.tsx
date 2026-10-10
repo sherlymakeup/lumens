@@ -21,6 +21,7 @@ export function Composer({
   sandboxId,
   threadId,
   onUploadSandboxId,
+  textareaRef,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -33,6 +34,7 @@ export function Composer({
   sandboxId?: string;
   threadId?: string;
   onUploadSandboxId?: (sandboxId: string) => void;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   const model = useStudio((s) => s.settings.model);
   const agentMode = useStudio((s) => s.settings.agentMode);
@@ -163,8 +165,8 @@ export function Composer({
                 <button
                   type="button"
                   onClick={() => onAttachments(attachments.filter((x) => x.path !== a.path))}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label={`Hapus ${a.name}`}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={t["cmp.removeAttachment"]}
                 >
                   <X className="size-3" />
                 </button>
@@ -174,7 +176,10 @@ export function Composer({
         ) : null}
 
         <textarea
-          ref={ref}
+          ref={(el) => {
+            ref.current = el;
+            if (textareaRef) textareaRef.current = el;
+          }}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
@@ -199,7 +204,7 @@ export function Composer({
             onClick={() => fileRef.current?.click()}
             disabled={disabled || uploading || streaming || attachments.length >= 5 || !agentMode}
             title={agentMode ? t["cmp.attachFile"] : t["cmp.attachAgentOnly"]}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
           >
             {uploading ? (
               <Loader2 className="size-3.5 animate-spin" />

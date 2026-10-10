@@ -2,6 +2,11 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useStudio } from "@/lib/store";
 import type { Conversation } from "@/lib/types";
+import {
+  applyServerLoad,
+  fetchWithRetry,
+  type SyncConversation,
+} from "@/lib/conversation-sync-logic";
 
 const CACHE_KEY = "xdirga-conv-cache-v1";
 const SAVE_DEBOUNCE_MS = 2000;
@@ -41,49 +46,90 @@ export function useConversationsSync() {
     }
 
     if (loadedRef.current === user.id) return;
-    loadedRef.current = user.id;
+    // H1: loadedRef HANYA dikunci SETELAH fetch berhasil — kegagalan transient
+    // tidak mengunci state; retry 3x dengan backoff di dalam.
 
     // 2. Supabase — source of truth.
     (async () => {
-      const token = await getToken();
-      if (!token) return;
+      const result = await loadFromServer(getToken);
+      if (!result.ok) return; // H2: fetch gagal → pertahankan cache lokal.
+      // C1: merge — jangan overwrite buta; unsaved work lokal dipertahankan.
+      // M6: activeId divalidasi terhadap hasil merge.
+      const state = useStudio.getState();
+      const applied = applyServerLoad(
+        result,
+        state.conversations as SyncConversation[],
+        dirtyIds.current,
+        state.activeId,
+      );
+      if (!applied) return;
+      useStudio.setState({
+        conversations: applied.conversations as Conversation[],
+        activeId: applied.activeId,
+      });
+      prevConvsRef.current = applied.conversations as Conversation[];
+      loadedRef.current = user.id; // H1: kunci setelah sukses.
+      // Update cache.
       try {
-        const res = await fetch("/api/conversations", {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        });
-        if (!res.ok) return;
-        const { conversations } = (await res.json()) as { conversations: any[] };
-        if (!Array.isArray(conversations)) return;
-        // JANGAN timpa dengan kosong jika cache punya data (hindari history hilang).
-        if (conversations.length === 0) {
-          const current = useStudio.getState().conversations;
-          if (current.length > 0) return;
-        }
-        const mapped: Conversation[] = conversations.map((c) => ({
-          id: c.id,
-          title: c.title ?? "Untitled",
-          messages: Array.isArray(c.messages) ? c.messages : [],
-          createdAt: new Date(c.created_at).getTime(),
-          updatedAt: new Date(c.updated_at).getTime(),
-          projectId: c.project_id ?? null,
-          sandboxId: c.sandbox_id ?? undefined,
-        }));
-        useStudio.setState((s) => ({
-          conversations: mapped,
-          activeId: s.activeId ?? mapped[0]?.id ?? null,
-        }));
-        prevConvsRef.current = mapped;
-        // Update cache.
-        try {
-          localStorage.setItem(`${CACHE_KEY}:${user.id}`, JSON.stringify(mapped));
-        } catch {
-          /* quota penuh — abaikan */
-        }
+        localStorage.setItem(
+          `${CACHE_KEY}:${user.id}`,
+          JSON.stringify(applied.conversations),
+        );
       } catch {
-        /* offline — pakai cache yang sudah dimuat */
+        /* quota penuh — abaikan */
       }
     })();
+  }, [user, configured, getToken]);
+
+  // M4: Cross-tab — jika cache berubah dari tab lain, reload dari server.
+  // Guard signature + throttle mencegah ping-pong antar tab.
+  useEffect(() => {
+    if (!configured || !user) return;
+    const key = `${CACHE_KEY}:${user.id}`;
+    const sig = (convs: Conversation[]) =>
+      convs.map((c) => `${c.id}:${c.updatedAt}`).join("|");
+    let busy = false;
+    let lastReload = 0;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== key || busy) return;
+      if (Date.now() - lastReload < 3000) return;
+      let incoming: Conversation[];
+      try {
+        incoming = JSON.parse(e.newValue ?? "[]") as Conversation[];
+        if (!Array.isArray(incoming)) return;
+      } catch {
+        return;
+      }
+      // Sudah sinkron → abaikan.
+      if (sig(incoming) === sig(useStudio.getState().conversations)) return;
+      busy = true;
+      lastReload = Date.now();
+      (async () => {
+        try {
+          const result = await loadFromServer(getToken);
+          if (result.ok) {
+            const state = useStudio.getState();
+            const applied = applyServerLoad(
+              result,
+              state.conversations as SyncConversation[],
+              dirtyIds.current,
+              state.activeId,
+            );
+            if (applied) {
+              useStudio.setState({
+                conversations: applied.conversations as Conversation[],
+                activeId: applied.activeId,
+              });
+              prevConvsRef.current = applied.conversations as Conversation[];
+            }
+          }
+        } finally {
+          busy = false;
+        }
+      })();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [user, configured, getToken]);
 
   // Track conversation mana yang berubah (untuk save selektif).
@@ -195,6 +241,59 @@ export function useConversationsSync() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [user, configured, getToken]);
+}
+
+type LoadError = Error & { retryable?: boolean };
+
+/** H1: Ambil conversations dari server dengan retry max 3x + backoff.
+ *  401/403 tidak di-retry (auth failure). Selain itu transient → retry. */
+async function loadFromServer(
+  getToken: () => Promise<string | null>,
+): Promise<{ ok: true; conversations: SyncConversation[] } | { ok: false }> {
+  try {
+    return await fetchWithRetry(
+      async () => {
+        const token = await getToken();
+        if (!token) throw Object.assign(new Error("no-token"), { retryable: true });
+        let res: Response;
+        try {
+          res = await fetch("/api/conversations", {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          });
+        } catch {
+          throw Object.assign(new Error("network"), { retryable: true });
+        }
+        if (res.status === 401 || res.status === 403) {
+          throw Object.assign(new Error("auth"), { retryable: false });
+        }
+        if (!res.ok) {
+          throw Object.assign(new Error(`http-${res.status}`), { retryable: true });
+        }
+        const body = (await res.json().catch(() => null)) as {
+          conversations?: unknown;
+        } | null;
+        if (!body || !Array.isArray(body.conversations)) {
+          throw Object.assign(new Error("bad-payload"), { retryable: true });
+        }
+        const mapped: SyncConversation[] = (body.conversations as any[]).map((c) => ({
+          id: c.id,
+          title: c.title ?? "Untitled",
+          messages: Array.isArray(c.messages) ? c.messages : [],
+          createdAt: new Date(c.created_at).getTime(),
+          updatedAt: new Date(c.updated_at).getTime(),
+          projectId: c.project_id ?? null,
+          sandboxId: c.sandbox_id ?? undefined,
+        }));
+        return { ok: true as const, conversations: mapped };
+      },
+      3,
+      500,
+      (err: unknown) => (err as LoadError)?.retryable !== false,
+    );
+  } catch {
+    return { ok: false as const };
+  }
 }
 
 function serializeConv(conv: Conversation) {

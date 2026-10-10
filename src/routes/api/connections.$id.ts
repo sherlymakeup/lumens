@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { verifyAuth } from "@/lib/auth-server.ts";
 import { validateConnectionPayload } from "@/lib/connection-validation.ts";
 import {
   connectionEnv,
@@ -39,6 +40,9 @@ export const Route = createFileRoute("/api/connections/$id")({
   server: {
     handlers: {
       PATCH: async ({ request, params }) => {
+        // C1: wajib auth.
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
         const env = connectionEnv();
         if (!env) {
           return Response.json(
@@ -54,7 +58,8 @@ export const Route = createFileRoute("/api/connections/$id")({
         }
         // Validasi gabungan (paritas dengan POST): slug unik, URL publik,
         // auth_name wajib, tool unik — dengan excludeId agar nama sendiri lolos.
-        const existing = await listConnections(env);
+        // C2: hanya terhadap koneksi milik user ini.
+        const existing = await listConnections(env, userId);
         const v = validateConnectionPayload(
           {
             name: parsed.name?.trim(),
@@ -81,7 +86,7 @@ export const Route = createFileRoute("/api/connections/$id")({
         // lewat PATCH base_url (app tanpa auth).
         let secretCleared = false;
         if (parsed.base_url) {
-          const current = await getConnectionFull(env, params.id);
+          const current = await getConnectionFull(env, userId, params.id);
           if (current.ok && current.row?.auth_secret && !parsed.auth_secret) {
             const norm = (u: string) => u.trim().replace(/\/$/, "");
             if (norm(current.row.base_url) !== norm(parsed.base_url)) {
@@ -91,7 +96,7 @@ export const Route = createFileRoute("/api/connections/$id")({
         }
         // Menonaktifkan auth juga menghapus secret yang tidak terpakai.
         const clearSecret = secretCleared || parsed.clear_secret || parsed.auth_type === "none";
-        const r = await updateConnection(env, params.id, {
+        const r = await updateConnection(env, userId, params.id, {
           ...parsed,
           name: parsed.name?.trim(),
           base_url: parsed.base_url?.trim(),
@@ -114,7 +119,10 @@ export const Route = createFileRoute("/api/connections/$id")({
             : {}),
         });
       },
-      DELETE: async ({ params }) => {
+      DELETE: async ({ request, params }) => {
+        // C1: wajib auth.
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
         const env = connectionEnv();
         if (!env) {
           return Response.json(
@@ -122,7 +130,7 @@ export const Route = createFileRoute("/api/connections/$id")({
             { status: 503 },
           );
         }
-        const r = await deleteConnection(env, params.id);
+        const r = await deleteConnection(env, userId, params.id);
         if (!r.ok) return Response.json({ error: r.text }, { status: 500 });
         return Response.json({ ok: true });
       },

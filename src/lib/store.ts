@@ -193,7 +193,9 @@ export const useStudio = create<StudioState>()(
       setSandboxId: (conversationId, sandboxId) =>
         set((state) => ({
           conversations: state.conversations.map((item) =>
-            item.id === conversationId ? { ...item, sandboxId } : item,
+            item.id === conversationId
+              ? { ...item, sandboxId, updatedAt: Date.now() }
+              : item,
           ),
         })),
       clearAll: () => set({ conversations: [], activeId: null, streamingId: null }),

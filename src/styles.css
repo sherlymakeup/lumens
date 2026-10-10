@@ -285,6 +285,7 @@ html[data-font-size="lg"] {
   overflow-x: auto;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-border);
+  touch-action: pan-x pan-y;
 }
 
 .md-table {

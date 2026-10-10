@@ -73,14 +73,22 @@ function normalizeRow(raw: Record<string, unknown>): ConnectionRow {
 
 export async function listConnections(
   env: ConnectionEnv,
+  userId: string,
 ): Promise<{ ok: boolean; text: string; items: ConnectionPublic[] }> {
   if (!env) return { ok: false, text: NOT_CONFIGURED, items: [] };
+  if (!userId) return { ok: false, text: "Unauthorized.", items: [] };
+  // C2: hanya koneksi milik user ini.
+  const params = new URLSearchParams({
+    select: "*",
+    user_id: `eq.${userId}`,
+    order: "created_at.asc",
+  });
   let res: Response;
   try {
-    res = await fetch(
-      `${env.url}/rest/v1/connections?select=*&order=created_at.asc`,
-      { headers: headers(env), signal: AbortSignal.timeout(20_000) },
-    );
+    res = await fetch(`${env.url}/rest/v1/connections?${params}`, {
+      headers: headers(env),
+      signal: AbortSignal.timeout(20_000),
+    });
   } catch (error) {
     return {
       ok: false,
@@ -96,12 +104,15 @@ export async function listConnections(
 /** Ambil satu koneksi lengkap + secret terdekripsi (server-side only). */
 export async function getConnectionFull(
   env: ConnectionEnv,
+  userId: string,
   id: string,
 ): Promise<{ ok: boolean; text: string; row?: ConnectionRow; secret?: string | null }> {
   const cleanId = id.trim().slice(0, 60);
   if (!cleanId) return { ok: false, text: "ID koneksi kosong." };
   if (!env) return { ok: false, text: NOT_CONFIGURED };
-  const params = new URLSearchParams({ id: `eq.${cleanId}`, select: "*" });
+  if (!userId) return { ok: false, text: "Unauthorized." };
+  // C2: filter user_id — cegah akses koneksi milik user lain.
+  const params = new URLSearchParams({ id: `eq.${cleanId}`, user_id: `eq.${userId}`, select: "*" });
   let res: Response;
   try {
     res = await fetch(`${env.url}/rest/v1/connections?${params}`, {
@@ -132,9 +143,17 @@ export async function getConnectionFull(
 /** Ambil semua koneksi aktif + secret terdekripsi untuk agent (server-side only). */
 export async function listEnabledConnectionsFull(
   env: ConnectionEnv,
+  userId: string,
 ): Promise<{ ok: boolean; rows: (ConnectionRow & { secret: string | null })[] }> {
   if (!env) return { ok: false, rows: [] };
-  const params = new URLSearchParams({ enabled: "eq.true", select: "*", order: "created_at.asc" });
+  if (!userId) return { ok: false, rows: [] };
+  // C2: hanya koneksi milik user ini.
+  const params = new URLSearchParams({
+    enabled: "eq.true",
+    user_id: `eq.${userId}`,
+    select: "*",
+    order: "created_at.asc",
+  });
   let res: Response;
   try {
     res = await fetch(`${env.url}/rest/v1/connections?${params}`, {
@@ -177,9 +196,11 @@ export type ConnectionInput = {
 
 export async function createConnection(
   env: ConnectionEnv,
+  userId: string,
   input: ConnectionInput,
 ): Promise<{ ok: boolean; text: string; item?: ConnectionPublic }> {
   if (!env) return { ok: false, text: NOT_CONFIGURED };
+  if (!userId) return { ok: false, text: "Unauthorized." };
   let enc: string | null = null;
   if (input.auth_secret) {
     try {
@@ -189,6 +210,8 @@ export async function createConnection(
     }
   }
   const body = {
+    // C2: koneksi terikat ke pemiliknya.
+    user_id: userId,
     name: input.name,
     kind: input.kind,
     base_url: input.base_url,
@@ -223,12 +246,14 @@ export async function createConnection(
 
 export async function updateConnection(
   env: ConnectionEnv,
+  userId: string,
   id: string,
   input: Partial<ConnectionInput>,
 ): Promise<{ ok: boolean; text: string; item?: ConnectionPublic }> {
   const cleanId = id.trim().slice(0, 60);
   if (!cleanId) return { ok: false, text: "ID koneksi kosong." };
   if (!env) return { ok: false, text: NOT_CONFIGURED };
+  if (!userId) return { ok: false, text: "Unauthorized." };
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.kind !== undefined) patch.kind = input.kind;
@@ -247,7 +272,8 @@ export async function updateConnection(
   if (input.enabled !== undefined) patch.enabled = input.enabled;
   if (Object.keys(patch).length === 0) return { ok: false, text: "Tidak ada perubahan." };
 
-  const params = new URLSearchParams({ id: `eq.${cleanId}` });
+  // C2: filter user_id — PATCH hanya untuk koneksi milik user ini.
+  const params = new URLSearchParams({ id: `eq.${cleanId}`, user_id: `eq.${userId}` });
   let res: Response;
   try {
     res = await fetch(`${env.url}/rest/v1/connections?${params}`, {
@@ -270,12 +296,15 @@ export async function updateConnection(
 
 export async function deleteConnection(
   env: ConnectionEnv,
+  userId: string,
   id: string,
 ): Promise<{ ok: boolean; text: string }> {
   const cleanId = id.trim().slice(0, 60);
   if (!cleanId) return { ok: false, text: "ID koneksi kosong." };
   if (!env) return { ok: false, text: NOT_CONFIGURED };
-  const params = new URLSearchParams({ id: `eq.${cleanId}` });
+  if (!userId) return { ok: false, text: "Unauthorized." };
+  // C2: filter user_id — DELETE hanya untuk koneksi milik user ini.
+  const params = new URLSearchParams({ id: `eq.${cleanId}`, user_id: `eq.${userId}` });
   let res: Response;
   try {
     res = await fetch(`${env.url}/rest/v1/connections?${params}`, {

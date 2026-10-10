@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { verifyAuth } from "@/lib/auth-server.ts";
 import { discoverMcpTools, fetchPublicUrl } from "@/lib/agent-connectors.ts";
 import {
   connectionEnv,
@@ -14,7 +15,10 @@ import {
 export const Route = createFileRoute("/api/connections/$id/test")({
   server: {
     handlers: {
-      POST: async ({ params }) => {
+      POST: async ({ request, params }) => {
+        // C1: wajib auth.
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
         const env = connectionEnv();
         if (!env) {
           return Response.json(
@@ -22,7 +26,7 @@ export const Route = createFileRoute("/api/connections/$id/test")({
             { status: 503 },
           );
         }
-        const full = await getConnectionFull(env, params.id);
+        const full = await getConnectionFull(env, userId, params.id);
         if (!full.ok || !full.row) {
           return Response.json({ error: full.text }, { status: 404 });
         }
@@ -39,7 +43,7 @@ export const Route = createFileRoute("/api/connections/$id/test")({
             return Response.json({ ok: false, error: discovered.text }, { status: 502 });
           }
           // Simpan hasil discovery agar agent tidak perlu discovery tiap request
-          const saved = await updateConnection(env, row.id, { tools: discovered.tools });
+          const saved = await updateConnection(env, userId, row.id, { tools: discovered.tools });
           if (!saved.ok) {
             return Response.json({ ok: false, error: `Discovery OK, tapi gagal simpan: ${saved.text}` }, { status: 502 });
           }

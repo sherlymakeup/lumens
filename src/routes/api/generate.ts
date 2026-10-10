@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { verifyAuth } from "@/lib/auth-server.ts";
 import { chatCompletionsUrl } from "@/lib/safe-url";
 import { clamp } from "@/lib/utils";
 
@@ -32,6 +33,10 @@ export const Route = createFileRoute("/api/generate")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // C1: wajib auth — endpoint ini memakai API key server.
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
         const parsed = Body.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {
           return Response.json({ error: "Invalid request." }, { status: 400 });

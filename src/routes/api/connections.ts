@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { verifyAuth } from "@/lib/auth-server.ts";
 import {
   assertPublicConnectorUrl,
   type ConnectorToolDef,
@@ -39,13 +40,19 @@ const CreateBody = z.object({
 export const Route = createFileRoute("/api/connections")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        // C1: wajib auth — konektor menyimpan secret terenkripsi.
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
         const env = connectionEnv();
-        const r = await listConnections(env);
+        const r = await listConnections(env, userId);
         if (!r.ok) return Response.json({ error: r.text }, { status: 503 });
         return Response.json({ connections: r.items });
       },
       POST: async ({ request }) => {
+        // C1: wajib auth.
+        const userId = await verifyAuth(request);
+        if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
         const env = connectionEnv();
         if (!env) {
           return Response.json(
@@ -60,7 +67,8 @@ export const Route = createFileRoute("/api/connections")({
           return Response.json({ error: "Body tidak valid." }, { status: 400 });
         }
         // Validasi gabungan (slug unik, URL publik, auth_name, tool unik)
-        const existing = await listConnections(env);
+        // C2: validasi hanya terhadap koneksi milik user ini.
+        const existing = await listConnections(env, userId);
         const v = validateConnectionPayload(
           {
             name: parsed.name.trim(),
@@ -87,7 +95,7 @@ export const Route = createFileRoute("/api/connections")({
           path: t.path,
           params: t.params,
         }));
-        const r = await createConnection(env, {
+        const r = await createConnection(env, userId, {
           name: parsed.name.trim(),
           kind: parsed.kind,
           base_url: parsed.base_url.trim(),

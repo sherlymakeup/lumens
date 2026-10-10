@@ -19,8 +19,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStudio } from "@/lib/store";
 import { useAuth } from "@/lib/auth-context";
 import { deleteConversationRemote } from "@/lib/conversations-sync";
@@ -256,14 +256,14 @@ export function Sidebar({ className }: { className?: string }) {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 px-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2">
         <NavLinks items={MAIN_NAV} onNavigate={close} />
         <NavHeading>{t["nav.engines"]}</NavHeading>
         <NavLinks items={ENGINE_NAV} onNavigate={close} />
         <NavHeading>{t["nav.projects"]}</NavHeading>
         <NavLinks items={MANAGE_NAV} onNavigate={close} />
         <ChatList onNavigate={close} />
-      </ScrollArea>
+      </div>
 
       {/* Bawah ala Grok: settings + user */}
       <div className="border-t border-sidebar-border p-2">
@@ -282,7 +282,13 @@ export function Sidebar({ className }: { className?: string }) {
           <button
             type="button"
             onClick={() => {
-              void signOut().then(() => navigate({ to: "/login", replace: true }));
+              // H2: signOut bisa reject walau state sudah dibersihkan (try/finally) —
+              // tampilkan feedback error, bukan diam.
+              void signOut()
+                .then(() => navigate({ to: "/login", replace: true }))
+                .catch(() => {
+                  toast.error(t["auth.signOutFailed"]);
+                });
             }}
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-muted-foreground transition-colors duration-150 hover:bg-sidebar-accent/70 hover:text-foreground"
             title={user.email ?? ""}

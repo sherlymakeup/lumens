@@ -68,6 +68,16 @@ export function Studio() {
   const [draft, setDraft] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [thinking, setThinking] = useState(false);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  /** Prompt Card diklik → prefill ke composer + fokus, user bisa edit sebelum kirim. */
+  function handlePickPrompt(prompt: string) {
+    setDraft(prompt);
+    // Fokus setelah render — requestAnimationFrame agar DOM sudah update.
+    requestAnimationFrame(() => {
+      composerTextareaRef.current?.focus();
+    });
+  }
   // Fase status dinamis: label aktivitas agent saat ini (key i18n "status.*").
   const [agentPhase, setAgentPhase] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
@@ -257,14 +267,19 @@ export function Studio() {
             ],
           });
         },
-        onToolResult: (output, exitCode, images, files) => {
+        onToolResult: (output, exitCode, images, files, toolCallId) => {
           const current = useStudio
             .getState()
             .conversations.find((item) => item.id === conversationId)
             ?.messages.find((message) => message.id === assistantId);
           const calls = [...(current?.toolCalls ?? [])];
           if (calls.length > 0) {
-            calls[calls.length - 1] = { ...calls[calls.length - 1], output, exitCode, images, files };
+            // Cocokkan by ID jika server mengirim toolCallId (subagent paralel),
+            // fallback ke entry terakhir untuk tool sekuensial.
+            const idx =
+              toolCallId != null ? calls.findIndex((c) => c.id === toolCallId) : calls.length - 1;
+            const target = idx >= 0 ? idx : calls.length - 1;
+            calls[target] = { ...calls[target], output, exitCode, images, files };
           }
           patchMessage(conversationId, assistantId, { toolCalls: calls });
           setAgentPhase("status.processing");
@@ -289,6 +304,11 @@ export function Studio() {
           setStreamingId(null);
           setAgentPhase(null);
           abortRef.current = null;
+        },
+        strings: {
+          cancelled: t["stream.cancelled"],
+          interrupted: t["stream.interrupted"],
+          incomplete: t["stream.incomplete"],
         },
       },
     ).catch((err) => {
@@ -414,12 +434,21 @@ export function Studio() {
           setAgentPhase(null);
           abortRef.current = null;
         },
+        strings: {
+          cancelled: t["stream.cancelled"],
+          interrupted: t["stream.interrupted"],
+          incomplete: t["stream.incomplete"],
+        },
       },
-    );
+    ).catch((err) => {
+      // Stream terputus paksa (tab di-background, network drop) — jangan biarkan stuck.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      handleStreamInterrupted(id, assistant.id, assembled, startedAt);
+    });
   }
 
   function regenerate() {
-    if (!conversation) return;
+    if (!conversation || useStudio.getState().streamingId) return;
     const lastUser = [...conversation.messages].reverse().find((item) => item.role === "user");
     if (!lastUser) return;
     const cut = conversation.messages.filter((item) => item.createdAt < lastUser.createdAt);
@@ -443,6 +472,7 @@ export function Studio() {
       sandboxId={conversation?.sandboxId}
       threadId={conversation?.id}
       onUploadSandboxId={setUploadSandboxId}
+      textareaRef={composerTextareaRef}
     />
   );
 
@@ -475,7 +505,7 @@ export function Studio() {
         <Header models={models} />
         {messages.length === 0 ? (
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <EmptyState onPick={(prompt) => void run(prompt)} composer={composerNode} />
+            <EmptyState onPick={handlePickPrompt} composer={composerNode} />
           </div>
         ) : (
           <>

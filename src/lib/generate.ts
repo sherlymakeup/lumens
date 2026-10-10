@@ -1,6 +1,15 @@
 import type { AgentFile, GenerateRequest } from "./types";
 import type { PlanStep } from "./agent-plan";
 import { getSupabase } from "./supabase-client";
+import { getUnauthorizedHandler } from "./auth-utils";
+
+/** Panggil handler 401 global (terdaftar oleh AuthProvider). */
+async function notifyUnauthorized(): Promise<void> {
+  const handler = getUnauthorizedHandler();
+  if (handler) {
+    await handler().catch(() => {});
+  }
+}
 
 /** Ambil JWT untuk Authorization header (null jika auth tidak dikonfigurasi). */
 async function getAuthHeader(): Promise<Record<string, string>> {
@@ -15,12 +24,26 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   }
 }
 
+export type StreamStrings = {
+  cancelled: string;
+  interrupted: string;
+  incomplete: string;
+};
+
+const FALLBACK_STREAM_STRINGS: StreamStrings = {
+  cancelled: "Dibatalkan.",
+  interrupted: "Stream terputus.",
+  incomplete: "Respons tidak lengkap — koneksi terputus.",
+};
+
 export type StreamHandlers = {
   onDelta: (text: string) => void;
   onThinking?: () => void;
   onDone: () => void;
   onError: (message: string) => void;
   signal?: AbortSignal;
+  /** String lokal untuk pesan error (dari i18n di caller). Default: Indonesia. */
+  strings?: StreamStrings;
 };
 
 function parseSseBuffer(buffer: string, onEvent: (payload: string) => void) {
@@ -64,6 +87,10 @@ export async function generateStream(request: GenerateRequest, handlers: StreamH
       const text = await response.text().catch(() => "");
       if (text) message = text.slice(0, 280);
     }
+    // H3: 401 → coba refresh token; gagal → redirect /login.
+    if (response.status === 401) {
+      await notifyUnauthorized();
+    }
     handlers.onError(message);
     return;
   }
@@ -86,47 +113,76 @@ export async function generateStream(request: GenerateRequest, handlers: StreamH
     return;
   }
 
+  const strs = handlers.strings ?? FALLBACK_STREAM_STRINGS;
   const decoder = new TextDecoder();
   let buffer = "";
   let failed = false;
+  let doneReceived = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    buffer = parseSseBuffer(buffer, (payload) => {
-      if (payload === "[DONE]" || failed) return;
-      try {
-        const json = JSON.parse(payload) as {
-          text?: string;
-          done?: boolean;
-          thinking?: boolean;
-          error?: string;
-        };
-        if (json.error) {
-          failed = true;
-          handlers.onError(json.error);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      buffer = parseSseBuffer(buffer, (payload) => {
+        if (payload === "[DONE]") {
+          doneReceived = true;
           return;
         }
-        if (json.thinking) handlers.onThinking?.();
-        if (json.text) handlers.onDelta(json.text);
-      } catch {
-        /* ignore malformed chunks */
-      }
-    });
+        if (failed) return;
+        try {
+          const json = JSON.parse(payload) as {
+            text?: string;
+            done?: boolean;
+            thinking?: boolean;
+            error?: string;
+          };
+          if (json.error) {
+            failed = true;
+            handlers.onError(json.error);
+            return;
+          }
+          if (json.done) doneReceived = true;
+          if (json.thinking) handlers.onThinking?.();
+          if (json.text) handlers.onDelta(json.text);
+        } catch {
+          /* ignore malformed chunks */
+        }
+      });
+    }
+  } catch {
+    // Koneksi putus paksa (tab di-background, network drop) — jangan biarkan stuck.
+    if (!failed) {
+      handlers.onError(handlers.signal?.aborted ? strs.cancelled : strs.interrupted);
+    }
+    return;
+  } finally {
+    // Bebaskan koneksi HTTP meski loop berhenti lebih awal.
+    reader.cancel().catch(() => {});
   }
 
-  if (!failed) handlers.onDone();
+  if (failed) return;
+  // Stream berakhir tanpa event done/error = respons kepotong diam-diam.
+  if (doneReceived) handlers.onDone();
+  else handlers.onError(strs.incomplete);
 }
 
 export type AgentHandlers = {
   onText: (delta: string) => void;
   onToolCall: (command: string, kind?: string) => void;
-  onToolResult: (output: string, exitCode: number, images?: string[], files?: AgentFile[]) => void;
+  onToolResult: (
+    output: string,
+    exitCode: number,
+    images?: string[],
+    files?: AgentFile[],
+    toolCallId?: string,
+  ) => void;
   onPlan?: (steps: PlanStep[]) => void;
   onDone: (sandboxId?: string) => void;
   onError: (message: string) => void;
   signal?: AbortSignal;
+  /** String lokal untuk pesan error (dari i18n di caller). Default: Indonesia. */
+  strings?: StreamStrings;
 };
 
 export async function generateAgent(
@@ -179,6 +235,10 @@ export async function generateAgent(
     } catch {
       /* keep default */
     }
+    // H3: 401 → coba refresh token; gagal → redirect /login.
+    if (response.status === 401) {
+      await notifyUnauthorized();
+    }
     handlers.onError(message);
     return;
   }
@@ -192,6 +252,7 @@ export async function generateAgent(
   const decoder = new TextDecoder();
   let buffer = "";
   let done = false;
+  const strs = handlers.strings ?? FALLBACK_STREAM_STRINGS;
   try {
     while (true) {
       const { done: readerDone, value } = await reader.read();
@@ -211,12 +272,19 @@ export async function generateAgent(
             files?: AgentFile[];
             steps?: PlanStep[];
             sandboxId?: string;
+            toolCallId?: string;
             error?: string;
           };
           if (json.type === "text" && json.delta) handlers.onText(json.delta);
           else if (json.type === "tool_call") handlers.onToolCall(json.command ?? "", json.kind);
           else if (json.type === "tool_result")
-            handlers.onToolResult(json.output ?? "", json.exitCode ?? 0, json.images, json.files);
+            handlers.onToolResult(
+              json.output ?? "",
+              json.exitCode ?? 0,
+              json.images,
+              json.files,
+              json.toolCallId,
+            );
           else if (json.type === "plan" && Array.isArray(json.steps))
             handlers.onPlan?.(json.steps as PlanStep[]);
           else if (json.type === "done") {
@@ -235,9 +303,15 @@ export async function generateAgent(
   } catch (error) {
     if (!done) {
       handlers.onError(
-        handlers.signal?.aborted ? "Dibatalkan." : error instanceof Error ? error.message : "Stream interrupted.",
+        handlers.signal?.aborted
+          ? strs.cancelled
+          : error instanceof Error
+            ? error.message
+            : strs.interrupted,
       );
     }
+  } finally {
+    reader.cancel().catch(() => {});
   }
   if (!done) handlers.onDone(request.sandboxId);
 }
