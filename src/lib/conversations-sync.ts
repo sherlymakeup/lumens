@@ -26,6 +26,7 @@ export function useConversationsSync() {
   useEffect(() => {
     if (!configured || !user) {
       loadedRef.current = null;
+      useStudio.setState({ syncLoaded: false });
       return;
     }
     // 1. Cache lokal — tampilkan langsung biar tidak kosong.
@@ -45,38 +46,48 @@ export function useConversationsSync() {
       /* cache corrupt — abaikan */
     }
 
-    if (loadedRef.current === user.id) return;
+    if (loadedRef.current === user.id) {
+      // Sudah pernah load di sesi ini — tandai selesai langsung.
+      useStudio.getState().setSyncLoaded();
+      return;
+    }
     // H1: loadedRef HANYA dikunci SETELAH fetch berhasil — kegagalan transient
     // tidak mengunci state; retry 3x dengan backoff di dalam.
 
     // 2. Supabase — source of truth.
     (async () => {
-      const result = await loadFromServer(getToken);
-      if (!result.ok) return; // H2: fetch gagal → pertahankan cache lokal.
-      // C1: merge — jangan overwrite buta; unsaved work lokal dipertahankan.
-      // M6: activeId divalidasi terhadap hasil merge.
-      const state = useStudio.getState();
-      const applied = applyServerLoad(
-        result,
-        state.conversations as SyncConversation[],
-        dirtyIds.current,
-        state.activeId,
-      );
-      if (!applied) return;
-      useStudio.setState({
-        conversations: applied.conversations as Conversation[],
-        activeId: applied.activeId,
-      });
-      prevConvsRef.current = applied.conversations as Conversation[];
-      loadedRef.current = user.id; // H1: kunci setelah sukses.
-      // Update cache.
       try {
-        localStorage.setItem(
-          `${CACHE_KEY}:${user.id}`,
-          JSON.stringify(applied.conversations),
+        const result = await loadFromServer(getToken);
+        if (!result.ok) return; // H2: fetch gagal → pertahankan cache lokal.
+        // C1: merge — jangan overwrite buta; unsaved work lokal dipertahankan.
+        // M6: activeId divalidasi terhadap hasil merge.
+        const state = useStudio.getState();
+        const applied = applyServerLoad(
+          result,
+          state.conversations as SyncConversation[],
+          dirtyIds.current,
+          state.activeId,
         );
-      } catch {
-        /* quota penuh — abaikan */
+        if (!applied) return;
+        useStudio.setState({
+          conversations: applied.conversations as Conversation[],
+          activeId: applied.activeId,
+        });
+        prevConvsRef.current = applied.conversations as Conversation[];
+        loadedRef.current = user.id; // H1: kunci setelah sukses.
+        // Update cache.
+        try {
+          localStorage.setItem(
+            `${CACHE_KEY}:${user.id}`,
+            JSON.stringify(applied.conversations),
+          );
+        } catch {
+          /* quota penuh — abaikan */
+        }
+      } finally {
+        // Tandai sync selesai (sukses maupun gagal) agar route tidak
+        // redirect prematur sebelum data sempat dimuat.
+        useStudio.getState().setSyncLoaded();
       }
     })();
   }, [user, configured, getToken]);

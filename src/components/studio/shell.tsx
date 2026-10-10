@@ -106,15 +106,23 @@ export function Studio() {
   }, [setHydrated]);
 
   // URL selalu mencerminkan thread aktif: /thread/<id> atau / bila kosong.
+  // Guard: jangan navigasi jika URL sudah benar — cegah loop dengan
+  // effect di thread.$threadId.tsx yang juga melakukan navigate.
   useEffect(() => {
+    const currentPath = window.location.pathname;
     if (activeId) {
-      navigate({
-        to: "/thread/$threadId",
-        params: { threadId: activeId },
-        replace: true,
-      });
+      const expected = `/thread/${activeId}`;
+      if (currentPath !== expected) {
+        navigate({
+          to: "/thread/$threadId",
+          params: { threadId: activeId },
+          replace: true,
+        });
+      }
     } else {
-      navigate({ to: "/", replace: true });
+      if (currentPath !== "/") {
+        navigate({ to: "/", replace: true });
+      }
     }
   }, [activeId, navigate]);
 

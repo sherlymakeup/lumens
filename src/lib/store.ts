@@ -15,6 +15,7 @@ import { newThreadId } from "./thread";
 
 type StudioState = {
   hydrated: boolean;
+  syncLoaded: boolean;
   settings: StudioSettings;
   conversations: Conversation[];
   activeId: string | null;
@@ -28,6 +29,7 @@ type StudioState = {
   customModels: CustomModel[];
   projects: Project[];
   setHydrated: () => void;
+  setSyncLoaded: () => void;
   setSettings: (partial: Partial<StudioSettings>) => void;
   resetSettings: () => void;
   setSidebarOpen: (open: boolean) => void;
@@ -64,6 +66,7 @@ export const useStudio = create<StudioState>()(
   persist(
     (set, get) => ({
       hydrated: false,
+      syncLoaded: false,
       settings: DEFAULT_SETTINGS,
       conversations: [],
       activeId: null,
@@ -80,6 +83,7 @@ export const useStudio = create<StudioState>()(
         applyChrome(get().settings);
         set({ hydrated: true });
       },
+      setSyncLoaded: () => set({ syncLoaded: true }),
       setSettings: (partial) => {
         const settings = { ...get().settings, ...partial };
         applyChrome(settings);
