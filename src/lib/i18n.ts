@@ -836,3 +836,4 @@ export function useStrings(): Record<StringKey, string> {
   const lang = useStudio((s) => s.settings.lang);
   return STRINGS[lang] ?? STRINGS.id;
 }
+
