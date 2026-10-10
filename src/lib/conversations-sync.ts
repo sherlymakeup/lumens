@@ -137,13 +137,28 @@ export function useConversationsSync() {
     };
   }, [conversations, user, configured, getToken]);
 
-  // Save segera saat page mau ditutup/refresh — cegah data hilang.
+  // Save segera saat page mau ditutup/refresh/hide — cegah data hilang.
+  // beforeunload tidak reliable di mobile; visibilitychange + pagehide menutup celahnya.
   useEffect(() => {
     if (!configured || !user) return;
-    const handler = () => {
+    const saveCacheSync = () => {
+      // localStorage write sinkron — selesai sebelum page di-discard.
+      try {
+        const light = useStudio.getState().conversations.slice(0, 50).map((c) => ({
+          ...c,
+          messages: c.messages.map((m) => ({
+            ...m,
+            toolCalls: m.toolCalls?.map(({ images, files, ...rest }) => rest),
+          })),
+        }));
+        localStorage.setItem(`${CACHE_KEY}:${user.id}`, JSON.stringify(light));
+      } catch {
+        /* abaikan */
+      }
+    };
+    const saveServerBeacon = () => {
       if (dirtyIds.current.size === 0) return;
       const token = getToken();
-      // beforeunload: pakai sendBeacon agar tidak dibatalkan browser.
       void token.then((t) => {
         if (!t || dirtyIds.current.size === 0) return;
         const state = useStudio.getState();
@@ -152,7 +167,6 @@ export function useConversationsSync() {
         for (const conv of state.conversations) {
           if (!ids.has(conv.id)) continue;
           const body = JSON.stringify(serializeConv(conv));
-          // sendBeacon untuk POST dengan auth header tidak bisa — pakai fetch keepalive.
           void fetch("/api/conversations", {
             method: "POST",
             headers: {
@@ -165,8 +179,21 @@ export function useConversationsSync() {
         }
       });
     };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    const onHide = () => {
+      saveCacheSync();
+      saveServerBeacon();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") onHide();
+    };
+    window.addEventListener("beforeunload", onHide);
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", onHide);
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [user, configured, getToken]);
 }
 

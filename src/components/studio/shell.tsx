@@ -45,6 +45,8 @@ function phaseForToolKind(kind?: string): string {
 
 export function Studio() {
   const t = useStrings();
+  const stringsRef = useRef(t);
+  stringsRef.current = t;
   const navigate = useNavigate();
   const setHydrated = useStudio((s) => s.setHydrated);
   const settings = useStudio((s) => s.settings);
@@ -166,6 +168,26 @@ export function Studio() {
     setThinking(false);
   }
 
+  /** Cleanup saat stream terputus (tab di-background, network putus, dsb).
+   *  Partial content tetap disimpan; user bisa lanjutkan. */
+  function handleStreamInterrupted(
+    conversationId: string,
+    assistantId: string,
+    assembled: string,
+    startedAt: number,
+  ) {
+    const t = stringsRef.current;
+    patchMessage(conversationId, assistantId, {
+      error: t["agent.streamInterrupted"] ?? "Stream terputus. Respons partial tersimpan.",
+      content: assembled,
+      elapsedMs: Date.now() - startedAt,
+    });
+    setStreamingId(null);
+    setAgentPhase(null);
+    setThinking(false);
+    abortRef.current = null;
+  }
+
   async function runAgent(
     conversationId: string,
     assistantId: string,
@@ -269,7 +291,12 @@ export function Studio() {
           abortRef.current = null;
         },
       },
-    );
+    ).catch((err) => {
+      // Stream terputus paksa (tab di-background, network drop) — jangan biarkan stuck.
+      // AbortError dari user menekan Stop sudah ditangani via stop(), abaikan di sini.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      handleStreamInterrupted(conversationId, assistantId, assembled, startedAt);
+    });
   }
 
   async function run(userText: string, prior?: ChatMessage[]) {
