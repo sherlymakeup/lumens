@@ -24,6 +24,15 @@ function inlineToHtml(text: string) {
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>',
   );
+  // Fallback: sandbox:// links ditulis agent sebagai markdown — render sebagai
+  // kartu file visual (bukan link rusak). Agent seharusnya pakai read_file tool.
+  html = html.replace(
+    /\[([^\]]+)\]\(sandbox:\/\/([^\s)]+)\)/g,
+    (_m, label: string, path: string) => {
+      const filename = path.split("/").pop() ?? path;
+      return `<span class="md-sandbox-file" data-path="${escapeHtml(path)}"><span class="md-sandbox-file-icon">📄</span><span class="md-sandbox-file-name">${escapeHtml(filename)}</span><span class="md-sandbox-file-hint">${escapeHtml(label)}</span></span>`;
+    },
+  );
   return html;
 }
 

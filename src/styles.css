@@ -431,6 +431,30 @@ html[data-font-size="lg"] {
   padding: 0.1em 0.32em;
 }
 
+/* Fallback card untuk sandbox:// links yang ditulis agent sebagai markdown. */
+.md-sandbox-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  padding: 0.5rem 0.75rem;
+  margin: 0.25rem 0;
+}
+.md-sandbox-file-icon {
+  font-size: 1.1rem;
+}
+.md-sandbox-file-name {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.md-sandbox-file-hint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
 .md-body a {
   text-decoration: underline;
   text-underline-offset: 3px;
