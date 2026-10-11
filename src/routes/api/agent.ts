@@ -58,6 +58,9 @@ const Attachment = z.object({
 
 const Body = z.object({
   messages: z.array(Message).min(1).max(24),
+  // Instruksi system/style dari client — dipisah dari messages agar
+  // role "system" tidak bisa diinjeksi via messages (H-4).
+  instructions: z.string().max(8_000).optional(),
   sandboxId: z.string().min(1).max(120).optional(),
   threadId: z.string().min(1).max(80).optional(),
   attachments: z.array(Attachment).max(5).optional(),
@@ -688,6 +691,10 @@ export const Route = createFileRoute("/api/agent")({
                 systemPrompt += `\n\nKonektor aktif (panggil via tool konektor_<slug-nama>__<slug-tool>, huruf kecil tanpa spasi):
 ${lines.join("\n")}
 Gunakan konektor ketika user meminta data/aksi dari layanan tersebut. Jangan pernah meminta atau menampilkan secret/API key — autentikasi sudah ditangani server.`;
+              }
+              // Instruksi system/style dari client (field instructions) digabung ke system prompt server.
+              if (parsed.data.instructions?.trim()) {
+                systemPrompt += `\n\nInstruksi gaya dari pengguna:\n${parsed.data.instructions.trim()}`;
               }
               const convo: ChatMsg[] = [
                 { role: "system", content: systemPrompt },

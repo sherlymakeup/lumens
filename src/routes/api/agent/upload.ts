@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Novita } from "novita-sandbox";
 import {
   MAX_UPLOAD_BYTES,
-  buildWriteCommand,
+  buildChunkedWriteCommands,
   sanitizeUploadName,
   uploadPath,
 } from "@/lib/agent-upload";
@@ -67,19 +67,23 @@ export const Route = createFileRoute("/api/agent/upload")({
           threadId ? threadWorkdir(threadId) : undefined,
         );
 
-        const cmd = buildWriteCommand(path, parsed.base64);
-        let result;
+        // File besar (>~128 KB base64) ditulis bertahap agar tidak menabrak ARG_MAX (E2BIG).
+        const cmds = buildChunkedWriteCommands(path, parsed.base64);
+        let result: { exitCode: number; stderr: string } | undefined;
         try {
-          result = await session.run(cmd, 60_000);
+          for (const cmd of cmds) {
+            result = await session.run(cmd, 60_000);
+            if (result.exitCode !== 0) break;
+          }
         } catch (error) {
           return Response.json(
             { error: error instanceof Error ? error.message : "Gagal menulis file ke sandbox." },
             { status: 502 },
           );
         }
-        if (result.exitCode !== 0) {
+        if (!result || result.exitCode !== 0) {
           return Response.json(
-            { error: `Gagal menulis file: ${result.stderr.slice(0, 200)}` },
+            { error: `Gagal menulis file: ${(result?.stderr ?? "").slice(0, 200)}` },
             { status: 502 },
           );
         }

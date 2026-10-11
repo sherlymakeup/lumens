@@ -1,7 +1,18 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+/** Baca env dengan aman — import.meta.env tidak ada di luar bundling Vite (Node/SSR). */
+function readEnv(key: string): string | undefined {
+  try {
+    const env = (import.meta as unknown as { env?: Record<string, unknown> } | undefined)?.env;
+    const v = env?.[key];
+    return typeof v === "string" && v.length > 0 ? v : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const url = readEnv("VITE_SUPABASE_URL");
+const anonKey = readEnv("VITE_SUPABASE_ANON_KEY");
 
 let client: SupabaseClient | null = null;
 

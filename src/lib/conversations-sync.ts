@@ -26,7 +26,9 @@ export function useConversationsSync() {
   useEffect(() => {
     if (!configured || !user) {
       loadedRef.current = null;
-      useStudio.setState({ syncLoaded: false });
+      // Mode lokal single-user (tanpa Supabase): tidak ada sync server,
+      // tandai selesai langsung agar deep-link /thread/:id tidak terpental.
+      useStudio.getState().setSyncLoaded();
       return;
     }
     // 1. Cache lokal — tampilkan langsung biar tidak kosong.

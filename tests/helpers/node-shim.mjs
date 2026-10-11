@@ -3,6 +3,14 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
+import { register } from "node:module";
+
+// Node 22+: loader hooks dari --import harus di-register eksplisit.
+// Self-register dengan guard agar tidak rekursi saat dimuat sebagai hooks.
+if (!process.env.NODE_SHIM_HOOKS_ACTIVE) {
+  process.env.NODE_SHIM_HOOKS_ACTIVE = "1";
+  register(import.meta.url);
+}
 
 const STUBS = {
   "supabase-client": `export function getSupabase() { return null; }\n`,

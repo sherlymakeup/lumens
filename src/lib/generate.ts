@@ -185,6 +185,20 @@ export type AgentHandlers = {
   strings?: StreamStrings;
 };
 
+export function extractSystemAndFilterMessages(
+  messages: { role: "system" | "user" | "assistant"; content: string }[],
+): {
+  instructions: string | undefined;
+  messages: { role: "user" | "assistant"; content: string }[];
+} {
+  const systemTexts = messages.filter((m) => m.role === "system").map((m) => m.content);
+  const filtered = messages.filter(
+    (m): m is { role: "user" | "assistant"; content: string } => m.role !== "system",
+  );
+  const instructions = systemTexts.length > 0 ? systemTexts.join("\n\n") : undefined;
+  return { instructions, messages: filtered };
+}
+
 export async function generateAgent(
   request: {
     messages: { role: "system" | "user" | "assistant"; content: string }[];
@@ -205,11 +219,13 @@ export async function generateAgent(
   let response: Response;
   try {
     const authHeader = await getAuthHeader();
+    const { instructions, messages } = extractSystemAndFilterMessages(request.messages);
     response = await fetch("/api/agent", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeader },
       body: JSON.stringify({
-        messages: request.messages,
+        messages,
+        instructions,
         threadId: request.threadId,
         sandboxId: request.sandboxId,
         attachments: request.attachments,

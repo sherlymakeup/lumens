@@ -72,6 +72,33 @@ function shellQuote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
+const CHUNK_SIZE = 64 * 1024; // 64 KB base64 per chunk
+const SINGLE_COMMAND_LIMIT = 128 * 1024; // ≤128 KB → perintah tunggal
+
+/**
+ * Perintah shell untuk menulis base64 besar ke file sandbox secara bertahap.
+ * Base64 > SINGLE_COMMAND_LIMIT dipecah jadi chunk 64 KB, di-append ke file
+ * .b64 sementara (satu argumen shell ≪ ARG_MAX), lalu di-decode ke target.
+ * Mengembalikan array perintah yang harus dijalankan berurutan.
+ */
+export function buildChunkedWriteCommands(relPath: string, base64: string): string[] {
+  if (base64.length <= SINGLE_COMMAND_LIMIT) return [buildWriteCommand(relPath, base64)];
+  const safe = sanitizeUploadName(relPath.split("/").pop() ?? relPath);
+  const dir = UPLOAD_DIR.replace(/[^a-zA-Z0-9_-]/g, "");
+  const suffix = Math.random().toString(36).slice(2, 10);
+  const tmp = `${dir}/.${safe}.${suffix}.b64`;
+  const target = `${dir}/${safe}`;
+  const cmds: string[] = [`mkdir -p -- ${shellQuote(dir)}`];
+  for (let i = 0; i < base64.length; i += CHUNK_SIZE) {
+    const chunk = base64.slice(i, i + CHUNK_SIZE);
+    cmds.push(`printf '%s' ${shellQuote(chunk)} ${i === 0 ? ">" : ">>"} ${shellQuote(tmp)}`);
+  }
+  cmds.push(
+    `base64 -d ${shellQuote(tmp)} > ${shellQuote(target)} && rm -f -- ${shellQuote(tmp)}`,
+  );
+  return cmds;
+}
+
 /** Baris deskripsi file untuk prompt agent. */
 export function attachmentNote(a: UploadAttachment): string {
   const kb = a.size >= 1024 ? `${(a.size / 1024).toFixed(1)} KB` : `${a.size} B`;
